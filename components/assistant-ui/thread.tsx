@@ -30,7 +30,7 @@ export const Thread: FC = () => {
   return (
     <ThreadPrimitive.Root
       // aui-thread-root
-      className="bg-background flex h-full flex-col"
+      className="bg-gray-900 text-white flex h-full flex-col"
       style={{
         ["--thread-max-width" as string]: "48rem",
         ["--thread-padding-x" as string]: "1rem",
@@ -66,18 +66,27 @@ const ThreadWelcome: FC = () => {
       {/* aui-thread-welcome-root */}
       <div className="mx-auto flex w-full max-w-[var(--thread-max-width)] flex-grow flex-col px-[var(--thread-padding-x)]">
         {/* aui-thread-welcome-center */}
-        <div className="flex w-full flex-grow flex-col items-center justify-center">
+        <div className="flex w-full flex-grow flex-col justify-end pb-4">
           {/* aui-thread-welcome-message */}
-          <div className="flex size-full flex-col justify-center px-8 md:mt-20">
+          <div className="px-4">
             <motion.div
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: 10 }}
               transition={{ delay: 0.5 }}
               // aui-thread-welcome-message-motion-1
-              className="text-2xl font-semibold"
+              className="text-lg font-medium text-gray-300 mb-4"
             >
-              What game do you want to build?
+              Start building your game
+            </motion.div>
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 10 }}
+              transition={{ delay: 0.7 }}
+              className="text-sm text-gray-400"
+            >
+              Describe your game idea and I&apos;ll help you create it.
             </motion.div>
           </div>
         </div>
@@ -90,14 +99,14 @@ const ThreadWelcome: FC = () => {
 const Composer: FC = () => {
   return (
     // aui-composer-wrapper
-    <div className="bg-background relative mx-auto flex w-full max-w-[var(--thread-max-width)] flex-col gap-4 px-[var(--thread-padding-x)] pb-4 md:pb-6">
+    <div className="bg-gray-900 relative mx-auto flex w-full max-w-[var(--thread-max-width)] flex-col gap-4 px-[var(--thread-padding-x)] pb-4 md:pb-6">
       {/* aui-composer-root */}
-      <ComposerPrimitive.Root className="focus-within::ring-offset-2 relative flex w-full flex-col rounded-2xl focus-within:ring-2 focus-within:ring-black dark:focus-within:ring-white">
+      <ComposerPrimitive.Root className="focus-within::ring-offset-2 relative flex w-full flex-col rounded-2xl focus-within:ring-2 focus-within:ring-blue-500">
         {/* aui-composer-input */}
         <ComposerPrimitive.Input
           placeholder="Describe your game idea..."
           className={
-            "bg-muted border-border dark:border-muted-foreground/15 focus:outline-primary placeholder:text-muted-foreground max-h-[calc(50dvh)] min-h-16 w-full resize-none rounded-t-2xl border-x border-t px-4 pt-2 pb-3 text-base outline-none"
+            "bg-gray-800 border-gray-700 text-white placeholder:text-gray-400 max-h-32 min-h-16 h-16 w-full resize-none rounded-t-2xl border-x border-t px-4 pt-2 pb-3 text-base outline-none"
           }
           rows={1}
           autoFocus
@@ -112,12 +121,12 @@ const Composer: FC = () => {
 const ComposerAction: FC = () => {
   return (
     // aui-composer-action-wrapper
-    <div className="bg-muted border-border dark:border-muted-foreground/15 relative flex items-center justify-between rounded-b-2xl border-x border-b p-2">
+    <div className="bg-gray-800 border-gray-700 relative flex items-center justify-between rounded-b-2xl border-x border-b p-2">
       <TooltipIconButton
         tooltip="Attach file"
         variant="ghost"
         // aui-composer-attachment-button
-        className="hover:bg-foreground/15 dark:hover:bg-background/50 scale-115 p-3.5"
+        className="hover:bg-gray-700 text-gray-400 hover:text-gray-200 scale-115 p-3.5"
         onClick={() => {
           console.log("Attachment clicked - not implemented");
         }}
@@ -131,7 +140,7 @@ const ComposerAction: FC = () => {
             type="submit"
             variant="default"
             // aui-composer-send
-            className="dark:border-muted-foreground/90 border-muted-foreground/60 hover:bg-primary/75 size-8 rounded-full border"
+            className="bg-blue-600 hover:bg-blue-700 text-white size-8 rounded-full border-0"
             aria-label="Send message"
           >
             {/* aui-composer-send-icon */}
@@ -146,7 +155,7 @@ const ComposerAction: FC = () => {
             type="button"
             variant="default"
             // aui-composer-cancel
-            className="dark:border-muted-foreground/90 border-muted-foreground/60 hover:bg-primary/75 size-8 rounded-full border"
+            className="bg-gray-600 hover:bg-gray-700 text-white size-8 rounded-full border-0"
             aria-label="Stop generating"
           >
             {/* aui-composer-cancel-icon */}
@@ -186,7 +195,7 @@ const AssistantMessage: FC = () => {
         </div>
 
         {/* aui-assistant-message-content */}
-        <div className="text-foreground col-span-2 col-start-2 row-start-1 ml-4 leading-7 break-words">
+        <div className="text-white col-span-2 col-start-2 row-start-1 ml-4 leading-7 break-words font-[family-name:var(--font-geist-sans)]">
           <MessagePrimitive.Content
             components={{
               Text: MarkdownText,

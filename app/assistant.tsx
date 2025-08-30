@@ -22,9 +22,8 @@ import {
   WebPreviewBody,
   WebPreviewConsole 
 } from "@/components/web-preview";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useThreadRuntime } from "@assistant-ui/react";
-import { Button } from "@/components/ui/button";
 
 const extractHtmlFromMessage = (content: string): string | null => {
   const htmlCodeBlockRegex = /```html\n([\s\S]*?)\n```/g;
@@ -41,6 +40,7 @@ const GamePreview = () => {
     timestamp: Date;
   }>>([]);
   const threadRuntime = useThreadRuntime();
+  const lastProcessedMessageId = useRef<string | null>(null);
 
   const addConsoleLog = useCallback((level: 'log' | 'warn' | 'error' | 'info', message: string) => {
     setConsoleLogs(prev => [...prev, { level, message, timestamp: new Date() }]);
@@ -57,14 +57,7 @@ const GamePreview = () => {
     try {
       // Get current conversation messages
       const state = threadRuntime.getState();
-      const messages = state.messages.map(msg => ({
-        id: msg.id,
-        role: msg.role,
-        content: msg.content
-          .filter(c => c.type === 'text')
-          .map(c => c.text)
-          .join('')
-      }));
+      const messages = state.messages;
 
       addConsoleLog('info', 'Calling code generation API...');
       
@@ -130,8 +123,31 @@ const GamePreview = () => {
 
   useEffect(() => {
     const handleMessageUpdate = () => {
-      // No longer auto-extract code from chat messages
-      // Code generation now happens only when Generate Code button is clicked
+      const state = threadRuntime.getState();
+      const messages = state.messages;
+      
+      // Only process when streaming is complete
+      if (state.isRunning) {
+        return;
+      }
+      
+      if (messages.length > 0) {
+        const lastMessage = messages[messages.length - 1];
+        
+        // Check if this is a new assistant message we haven't processed yet
+        if (lastMessage.role === 'assistant' && 
+            lastMessage.id !== lastProcessedMessageId.current &&
+            lastMessage.content.some(c => c.type === 'text' && c.text.trim().length > 0) &&
+            !isGeneratingCode && 
+            !gameCode) {
+          
+          // Mark this message as processed
+          lastProcessedMessageId.current = lastMessage.id;
+          
+          // Generate code immediately (no delay needed since streaming is done)
+          generateGameCode();
+        }
+      }
     };
 
     // Initial check
@@ -141,79 +157,36 @@ const GamePreview = () => {
     return threadRuntime.subscribe(() => {
       handleMessageUpdate();
     });
-  }, [threadRuntime]);
+  }, [threadRuntime, generateGameCode, isGeneratingCode, gameCode]);
 
   return (
     <div className="flex h-dvh w-full pr-0.5">
       <AppSidebar />
-      <SidebarInset>
-        <header className="flex h-16 shrink-0 items-center gap-2 border-b px-4">
-          <Breadcrumb>
-            <BreadcrumbList>
-              <BreadcrumbItem className="hidden md:block">
-                <BreadcrumbLink href="https://www.assistant-ui.com/docs/getting-started" target="_blank" rel="noopener noreferrer">
-                  Game Generator
-                </BreadcrumbLink>
-              </BreadcrumbItem>
-              <BreadcrumbSeparator className="hidden md:block" />
-              <BreadcrumbItem>
-                <BreadcrumbPage>
-                  {gameCode ? "Game Preview" : "Game Planning"}
-                </BreadcrumbPage>
-              </BreadcrumbItem>
-            </BreadcrumbList>
-          </Breadcrumb>
-          <div className="ml-auto">
-            <Button 
-              onClick={generateGameCode}
-              disabled={isGeneratingCode}
-              variant="default"
-              size="sm"
-            >
-              {isGeneratingCode ? "Generating..." : "Generate Code"}
-            </Button>
-          </div>
-        </header>
-        <div className="flex-1 overflow-hidden p-4">
-          {gameCode ? (
-            <WebPreview>
-              <WebPreviewNavigation>
-                <WebPreviewUrl disabled value="Generated Game" />
-              </WebPreviewNavigation>
+      <SidebarInset className="bg-gray-900">
+        <div className="flex-1 overflow-hidden p-4 bg-gray-900">
+          <WebPreview>
+            <WebPreviewNavigation>
+              <WebPreviewUrl disabled value={gameCode ? "Generated Game" : "Ready for your game..."} />
+            </WebPreviewNavigation>
+            {gameCode ? (
               <WebPreviewBody 
                 src={`data:text/html;charset=utf-8,${encodeURIComponent(gameCode)}`}
               />
+            ) : (
+              <div className="flex-1 bg-white flex items-center justify-center">
+                <div className="text-center space-y-4 text-muted-foreground">
+                  <div className="text-4xl opacity-30">🎮</div>
+                  <p className="text-lg">Your game will appear here</p>
+                </div>
+              </div>
+            )}
+            {consoleLogs.length > 0 && (
               <WebPreviewConsole 
                 logs={consoleLogs}
                 onClearLogs={clearConsoleLogs}
               />
-            </WebPreview>
-          ) : (
-            <div className="flex h-full">
-              <div className="flex-1 flex items-center justify-center">
-                <div className="text-center space-y-4">
-                  <div className="text-6xl opacity-20">💬</div>
-                  <h2 className="text-2xl font-semibold text-muted-foreground">
-                    Game Planning Phase
-                  </h2>
-                  <p className="text-muted-foreground max-w-md">
-                    Start by describing your game idea in the sidebar. I&apos;ll help you plan the game mechanics, design, and features before generating the code.
-                  </p>
-                  <p className="text-sm text-muted-foreground/75 max-w-md">
-                    Once you&apos;re happy with the game plan, click &quot;Generate Code&quot; to create your playable HTML game.
-                  </p>
-                </div>
-              </div>
-              {consoleLogs.length > 0 && (
-                <div className="w-96 border-l">
-                  <WebPreviewConsole 
-                    logs={consoleLogs}
-                    onClearLogs={clearConsoleLogs}
-                  />
-                </div>
-              )}
-            </div>
-          )}
+            )}
+          </WebPreview>
         </div>
       </SidebarInset>
     </div>
