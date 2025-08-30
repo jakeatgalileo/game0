@@ -10,7 +10,7 @@ export async function POST(req: Request) {
   const { messages }: { messages: UIMessage[] } = await req.json();
   
   try {
-    const systemPrompt = await loadPromptWithHotReload('game-planning');
+    const systemPrompt = await loadPromptWithHotReload('code-generation');
 
     const result = streamText({
       model: openai("gpt-5"),
@@ -19,14 +19,14 @@ export async function POST(req: Request) {
       providerOptions:{
         openai:{
           textVerbosity: "medium",
-          reasoningEffort: "medium"
+          reasoningEffort: "low"
         }
       }
     });
 
     return result.toUIMessageStreamResponse();
   } catch (error) {
-    console.error('Chat API error:', error);
+    console.error('Code generation API error:', error);
     return new Response('Internal Server Error', { status: 500 });
   }
 }

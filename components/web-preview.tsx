@@ -182,16 +182,18 @@ export const WebPreviewBody = ({
 
 export type WebPreviewConsoleProps = ComponentProps<'div'> & {
   logs?: Array<{
-    level: 'log' | 'warn' | 'error';
+    level: 'log' | 'warn' | 'error' | 'info';
     message: string;
     timestamp: Date;
   }>;
+  onClearLogs?: () => void;
 };
 
 export const WebPreviewConsole = ({
   className,
   logs = [],
   children,
+  onClearLogs,
   ...props
 }: WebPreviewConsoleProps) => {
   const { consoleOpen, setConsoleOpen } = useWebPreview();
@@ -209,12 +211,27 @@ export const WebPreviewConsole = ({
           variant="ghost"
         >
           Console
-          <ChevronDownIcon
-            className={cn(
-              'h-4 w-4 transition-transform duration-200',
-              consoleOpen && 'rotate-180'
+          <div className="flex items-center gap-2">
+            {onClearLogs && logs.length > 0 && (
+              <Button
+                size="sm"
+                variant="ghost"
+                className="h-6 px-2 text-xs"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onClearLogs();
+                }}
+              >
+                Clear
+              </Button>
             )}
-          />
+            <ChevronDownIcon
+              className={cn(
+                'h-4 w-4 transition-transform duration-200',
+                consoleOpen && 'rotate-180'
+              )}
+            />
+          </div>
         </Button>
       </CollapsibleTrigger>
       <CollapsibleContent
@@ -233,6 +250,7 @@ export const WebPreviewConsole = ({
                   'text-xs',
                   log.level === 'error' && 'text-destructive',
                   log.level === 'warn' && 'text-yellow-600',
+                  log.level === 'info' && 'text-blue-600',
                   log.level === 'log' && 'text-foreground'
                 )}
                 key={`${log.timestamp.getTime()}-${index}`}

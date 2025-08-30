@@ -22,8 +22,9 @@ import {
   WebPreviewBody,
   WebPreviewConsole 
 } from "@/components/web-preview";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useThreadRuntime } from "@assistant-ui/react";
+import { Button } from "@/components/ui/button";
 
 const extractHtmlFromMessage = (content: string): string | null => {
   const htmlCodeBlockRegex = /```html\n([\s\S]*?)\n```/g;
@@ -33,32 +34,104 @@ const extractHtmlFromMessage = (content: string): string | null => {
 
 const GamePreview = () => {
   const [gameCode, setGameCode] = useState("");
+  const [isGeneratingCode, setIsGeneratingCode] = useState(false);
+  const [consoleLogs, setConsoleLogs] = useState<Array<{
+    level: 'log' | 'warn' | 'error' | 'info';
+    message: string;
+    timestamp: Date;
+  }>>([]);
   const threadRuntime = useThreadRuntime();
+
+  const addConsoleLog = useCallback((level: 'log' | 'warn' | 'error' | 'info', message: string) => {
+    setConsoleLogs(prev => [...prev, { level, message, timestamp: new Date() }]);
+  }, []);
+
+  const clearConsoleLogs = useCallback(() => {
+    setConsoleLogs([]);
+  }, []);
+
+  const generateGameCode = useCallback(async () => {
+    setIsGeneratingCode(true);
+    addConsoleLog('info', 'Starting code generation...');
+    
+    try {
+      // Get current conversation messages
+      const state = threadRuntime.getState();
+      const messages = state.messages.map(msg => ({
+        id: msg.id,
+        role: msg.role,
+        content: msg.content
+          .filter(c => c.type === 'text')
+          .map(c => c.text)
+          .join('')
+      }));
+
+      addConsoleLog('info', 'Calling code generation API...');
+      
+      const response = await fetch('/api/generate-code', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ messages }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const reader = response.body?.getReader();
+      if (!reader) {
+        throw new Error('No response body');
+      }
+
+      let fullResponse = '';
+      addConsoleLog('info', 'Streaming code generation response...');
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        const text = new TextDecoder().decode(value);
+        const lines = text.split('\n');
+        
+        for (const line of lines) {
+          if (line.startsWith('0:')) {
+            try {
+              const data = JSON.parse(line.slice(2));
+              if (data.content && data.content[0]?.text) {
+                fullResponse += data.content[0].text;
+              }
+            } catch {
+              // Ignore parsing errors for incomplete chunks
+            }
+          }
+        }
+      }
+
+      addConsoleLog('info', 'Extracting HTML code from response...');
+      const extractedCode = extractHtmlFromMessage(fullResponse);
+      
+      if (extractedCode) {
+        setGameCode(extractedCode);
+        addConsoleLog('log', 'Game code generated successfully!');
+        addConsoleLog('log', `Generated ${extractedCode.length} characters of HTML/CSS/JS`);
+      } else {
+        addConsoleLog('warn', 'No HTML code found in response. Please try again.');
+      }
+
+    } catch (error) {
+      console.error('Code generation error:', error);
+      addConsoleLog('error', `Code generation failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    } finally {
+      setIsGeneratingCode(false);
+    }
+  }, [threadRuntime, addConsoleLog]);
 
   useEffect(() => {
     const handleMessageUpdate = () => {
-      try {
-        const state = threadRuntime.getState();
-        if (!state.messages || state.messages.length === 0) return;
-        
-        const lastAssistantMessage = state.messages
-          .filter(m => m.role === 'assistant')
-          .pop();
-        
-        if (lastAssistantMessage && lastAssistantMessage.content) {
-          const content = lastAssistantMessage.content
-            .filter(c => c.type === 'text')
-            .map(c => c.text)
-            .join('');
-          
-          const extractedCode = extractHtmlFromMessage(content);
-          if (extractedCode) {
-            setGameCode(extractedCode);
-          }
-        }
-      } catch (error) {
-        console.error('Error extracting game code:', error);
-      }
+      // No longer auto-extract code from chat messages
+      // Code generation now happens only when Generate Code button is clicked
     };
 
     // Initial check
@@ -84,10 +157,22 @@ const GamePreview = () => {
               </BreadcrumbItem>
               <BreadcrumbSeparator className="hidden md:block" />
               <BreadcrumbItem>
-                <BreadcrumbPage>Game Preview</BreadcrumbPage>
+                <BreadcrumbPage>
+                  {gameCode ? "Game Preview" : "Game Planning"}
+                </BreadcrumbPage>
               </BreadcrumbItem>
             </BreadcrumbList>
           </Breadcrumb>
+          <div className="ml-auto">
+            <Button 
+              onClick={generateGameCode}
+              disabled={isGeneratingCode}
+              variant="default"
+              size="sm"
+            >
+              {isGeneratingCode ? "Generating..." : "Generate Code"}
+            </Button>
+          </div>
         </header>
         <div className="flex-1 overflow-hidden p-4">
           {gameCode ? (
@@ -98,19 +183,35 @@ const GamePreview = () => {
               <WebPreviewBody 
                 src={`data:text/html;charset=utf-8,${encodeURIComponent(gameCode)}`}
               />
-              <WebPreviewConsole />
+              <WebPreviewConsole 
+                logs={consoleLogs}
+                onClearLogs={clearConsoleLogs}
+              />
             </WebPreview>
           ) : (
-            <div className="flex h-full items-center justify-center">
-              <div className="text-center space-y-4">
-                <div className="text-6xl opacity-20">🎮</div>
-                <h2 className="text-2xl font-semibold text-muted-foreground">
-                  Game Preview
-                </h2>
-                <p className="text-muted-foreground max-w-md">
-                  Start chatting in the sidebar to generate your first game! Describe any game you want to create.
-                </p>
+            <div className="flex h-full">
+              <div className="flex-1 flex items-center justify-center">
+                <div className="text-center space-y-4">
+                  <div className="text-6xl opacity-20">💬</div>
+                  <h2 className="text-2xl font-semibold text-muted-foreground">
+                    Game Planning Phase
+                  </h2>
+                  <p className="text-muted-foreground max-w-md">
+                    Start by describing your game idea in the sidebar. I&apos;ll help you plan the game mechanics, design, and features before generating the code.
+                  </p>
+                  <p className="text-sm text-muted-foreground/75 max-w-md">
+                    Once you&apos;re happy with the game plan, click &quot;Generate Code&quot; to create your playable HTML game.
+                  </p>
+                </div>
               </div>
+              {consoleLogs.length > 0 && (
+                <div className="w-96 border-l">
+                  <WebPreviewConsole 
+                    logs={consoleLogs}
+                    onClearLogs={clearConsoleLogs}
+                  />
+                </div>
+              )}
             </div>
           )}
         </div>
