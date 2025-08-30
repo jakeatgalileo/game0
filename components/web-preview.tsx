@@ -85,24 +85,10 @@ export const WebPreviewNavigation = ({
   ...props
 }: WebPreviewNavigationProps) => (
   <div
-    className={cn('flex items-center gap-2 border-b border-gray-700 bg-gray-800 px-4 py-2 rounded-t-lg', className)}
+    className={cn('flex items-center gap-1 border-b p-2', className)}
     {...props}
   >
-    <div className="flex items-center gap-1">
-      <div className="w-3 h-3 bg-red-500 rounded-full"></div>
-      <div className="w-3 h-3 bg-yellow-500 rounded-full"></div>
-      <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-    </div>
-    <div className="flex-1 ml-2">
-      {children}
-    </div>
-    <div className="flex items-center gap-2 text-gray-400">
-      <button className="p-1 hover:bg-gray-700 rounded">
-        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-        </svg>
-      </button>
-    </div>
+    {children}
   </div>
 );
 
@@ -158,10 +144,10 @@ export const WebPreviewUrl = ({
 
   return (
     <Input
-      className="h-8 flex-1 text-sm bg-gray-700 border-gray-600 text-white placeholder:text-gray-400 rounded-md"
+      className="h-8 flex-1 text-sm"
       onChange={onChange}
       onKeyDown={handleKeyDown}
-      placeholder="Game preview will appear here..."
+      placeholder="Enter URL..."
       value={value ?? url}
       {...props}
     />
@@ -181,7 +167,7 @@ export const WebPreviewBody = ({
   const { url } = useWebPreview();
 
   return (
-    <div className="flex-1 rounded-b-lg overflow-hidden">
+    <div className="flex-1">
       <iframe
         className={cn('size-full', className)}
         sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-presentation"
@@ -196,58 +182,41 @@ export const WebPreviewBody = ({
 
 export type WebPreviewConsoleProps = ComponentProps<'div'> & {
   logs?: Array<{
-    level: 'log' | 'warn' | 'error' | 'info';
+    level: 'log' | 'warn' | 'error';
     message: string;
     timestamp: Date;
   }>;
-  onClearLogs?: () => void;
 };
 
 export const WebPreviewConsole = ({
   className,
   logs = [],
   children,
-  onClearLogs,
   ...props
 }: WebPreviewConsoleProps) => {
   const { consoleOpen, setConsoleOpen } = useWebPreview();
 
   return (
     <Collapsible
-      className={cn('border-t bg-muted/50 font-mono text-sm rounded-b-lg', className)}
+      className={cn('border-t bg-muted/50 font-mono text-sm', className)}
       onOpenChange={setConsoleOpen}
       open={consoleOpen}
       {...props}
     >
-      <div className="flex w-full items-center justify-between p-4 text-left font-medium">
-        <CollapsibleTrigger asChild>
-          <Button
-            className="flex items-center gap-2 text-left font-medium hover:bg-muted/50 flex-1 justify-start p-0"
-            variant="ghost"
-          >
-            Console
-            <ChevronDownIcon
-              className={cn(
-                'h-4 w-4 transition-transform duration-200',
-                consoleOpen && 'rotate-180'
-              )}
-            />
-          </Button>
-        </CollapsibleTrigger>
-        {onClearLogs && logs.length > 0 && (
-          <Button
-            size="sm"
-            variant="ghost"
-            className="h-6 px-2 text-xs"
-            onClick={(e) => {
-              e.stopPropagation();
-              onClearLogs();
-            }}
-          >
-            Clear
-          </Button>
-        )}
-      </div>
+      <CollapsibleTrigger asChild>
+        <Button
+          className="flex w-full items-center justify-between p-4 text-left font-medium hover:bg-muted/50"
+          variant="ghost"
+        >
+          Console
+          <ChevronDownIcon
+            className={cn(
+              'h-4 w-4 transition-transform duration-200',
+              consoleOpen && 'rotate-180'
+            )}
+          />
+        </Button>
+      </CollapsibleTrigger>
       <CollapsibleContent
         className={cn(
           'px-4 pb-4',
@@ -264,7 +233,6 @@ export const WebPreviewConsole = ({
                   'text-xs',
                   log.level === 'error' && 'text-destructive',
                   log.level === 'warn' && 'text-yellow-600',
-                  log.level === 'info' && 'text-blue-600',
                   log.level === 'log' && 'text-foreground'
                 )}
                 key={`${log.timestamp.getTime()}-${index}`}

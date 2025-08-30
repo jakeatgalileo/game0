@@ -1,58 +1,50 @@
 import { openai } from "@ai-sdk/openai";
-import {
-  streamText,
-  UIMessage,
-  convertToModelMessages,
-} from "ai";
+import { streamText, convertToModelMessages } from "ai";
 import { loadPromptWithHotReload } from "@/lib/prompts";
 
-// Transform @assistant-ui messages to AI SDK format
-const transformToAISDKFormat = (message: any): UIMessage => {
-  return {
-    role: message.role,
-    content: message.content
-  };
-};
+// Allow streaming responses up to 30 seconds
+export const maxDuration = 30;
 
 export async function POST(req: Request) {
   try {
-    // Check environment variables
     if (!process.env.OPENAI_API_KEY) {
-      console.error('OPENAI_API_KEY environment variable is not set');
-      throw new Error('OpenAI API key is missing');
+      console.error("OPENAI_API_KEY environment variable is not set");
+      throw new Error("OpenAI API key is missing");
     }
     
-    const { messages }: { messages: UIMessage[] } = await req.json();
-    const systemPrompt = await loadPromptWithHotReload('code-generation');
+    const body = await req.json();
+    const messages = Array.isArray(body?.messages) ? body.messages : [];
+    const system = body?.system as string | undefined;
+    
+    const systemPrompt = system || (await loadPromptWithHotReload("code-generation"));
+   
+    console.log("Messages:", messages);
 
-    const cleanMessages = messages.map(transformToAISDKFormat);
-
+    console.log("Initializing OpenAI model...");
     const result = streamText({
       model: openai("gpt-5-mini"),
       system: systemPrompt,
-      messages: convertToModelMessages(cleanMessages),
-      providerOptions:{
-        openai:{
+      messages: convertToModelMessages(messages),
+      providerOptions: {
+        openai: {
           textVerbosity: "medium",
-          reasoningEffort: "low"
-        }
-      }
+          reasoningEffort: "low",
+        },
+      },
     });
 
-    console.log('Returning stream response...');
-    return result.toUIMessageStreamResponse();
+    return result.toTextStreamResponse();
   } catch (error) {
-    console.error('Code generation API error details:');
-    console.error('Error name:', error?.name);
-    console.error('Error message:', error?.message);
-    console.error('Error stack:', error?.stack);
-    
-    return new Response(JSON.stringify({ 
-      error: 'Internal Server Error',
-      details: error?.message || 'Unknown error'
-    }), { 
+    console.log("ERROR: ", error);
+    return new Response(
+      JSON.stringify({
+        error: "Internal Server Error",
+        details: error || "Unknown error",
+      }),
+      {
       status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+      headers: { "Content-Type": "application/json" },
+    }
+    );
   }
 }

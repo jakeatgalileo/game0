@@ -1,29 +1,15 @@
 "use client";
 
-import { AssistantRuntimeProvider } from "@assistant-ui/react";
-import { useChatRuntime } from "@assistant-ui/react-ai-sdk";
-import {
-  SidebarInset,
-  SidebarProvider,
-} from "@/components/ui/sidebar";
+import { useCallback, useRef, useState } from "react";
+import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/app-sidebar";
 import {
-  Breadcrumb,
-  BreadcrumbItem,
-  BreadcrumbLink,
-  BreadcrumbList,
-  BreadcrumbPage,
-  BreadcrumbSeparator,
-} from "@/components/ui/breadcrumb";
-import { 
-  WebPreview, 
-  WebPreviewNavigation, 
-  WebPreviewUrl, 
+  WebPreview,
+  WebPreviewNavigation,
+  WebPreviewUrl,
   WebPreviewBody,
-  WebPreviewConsole 
+  WebPreviewConsole,
 } from "@/components/web-preview";
-import { useState, useEffect, useCallback, useRef } from "react";
-import { useThreadRuntime } from "@assistant-ui/react";
 
 const extractHtmlFromMessage = (content: string): string | null => {
   const htmlCodeBlockRegex = /```html\n([\s\S]*?)\n```/g;
@@ -31,145 +17,16 @@ const extractHtmlFromMessage = (content: string): string | null => {
   return match ? match[1].trim() : null;
 };
 
-const GamePreview = () => {
-  const [gameCode, setGameCode] = useState("");
-  const [isGeneratingCode, setIsGeneratingCode] = useState(false);
-  const [consoleLogs, setConsoleLogs] = useState<Array<{
-    level: 'log' | 'warn' | 'error' | 'info';
-    message: string;
-    timestamp: Date;
-  }>>([]);
-  const threadRuntime = useThreadRuntime();
-  const lastProcessedMessageId = useRef<string | null>(null);
-
-  const addConsoleLog = useCallback((level: 'log' | 'warn' | 'error' | 'info', message: string) => {
-    setConsoleLogs(prev => [...prev, { level, message, timestamp: new Date() }]);
-  }, []);
-
-  const clearConsoleLogs = useCallback(() => {
-    setConsoleLogs([]);
-  }, []);
-
-  const generateGameCode = useCallback(async () => {
-    setIsGeneratingCode(true);
-    addConsoleLog('info', 'Starting code generation...');
-    
-    try {
-      // Get current conversation messages
-      const state = threadRuntime.getState();
-      const messages = state.messages;
-      
-      // Debug: Log the actual message structure
-      console.log('=== DEBUGGING MESSAGES ===');
-      console.log('state.messages length:', messages?.length);
-      console.log('First message structure:', messages[0]);
-      console.log('First message content:', messages[0]?.content);
-      console.log('All messages:', JSON.stringify(messages, null, 2));
-      console.log('=========================');
-
-      addConsoleLog('info', 'Calling code generation API...');
-      
-      const response = await fetch('/api/generate-code', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ messages }),
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const reader = response.body?.getReader();
-      if (!reader) {
-        throw new Error('No response body');
-      }
-
-      let fullResponse = '';
-      addConsoleLog('info', 'Streaming code generation response...');
-
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-
-        const text = new TextDecoder().decode(value);
-        const lines = text.split('\n');
-        
-        for (const line of lines) {
-          if (line.startsWith('0:')) {
-            try {
-              const data = JSON.parse(line.slice(2));
-              if (data.content && data.content[0]?.text) {
-                fullResponse += data.content[0].text;
-              }
-            } catch {
-              // Ignore parsing errors for incomplete chunks
-            }
-          }
-        }
-      }
-
-      addConsoleLog('info', 'Extracting HTML code from response...');
-      const extractedCode = extractHtmlFromMessage(fullResponse);
-      
-      if (extractedCode) {
-        setGameCode(extractedCode);
-        addConsoleLog('log', 'Game code generated successfully!');
-        addConsoleLog('log', `Generated ${extractedCode.length} characters of HTML/CSS/JS`);
-      } else {
-        addConsoleLog('warn', 'No HTML code found in response. Please try again.');
-      }
-
-    } catch (error) {
-      console.error('Code generation error:', error);
-      addConsoleLog('error', `Code generation failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
-    } finally {
-      setIsGeneratingCode(false);
-    }
-  }, [threadRuntime, addConsoleLog]);
-
-  useEffect(() => {
-    const handleMessageUpdate = () => {
-      const state = threadRuntime.getState();
-      const messages = state.messages;
-      
-      // Only process when streaming is complete
-      if (state.isRunning) {
-        return;
-      }
-      
-      if (messages.length > 0) {
-        const lastMessage = messages[messages.length - 1];
-        
-        // Check if this is a new assistant message we haven't processed yet
-        if (lastMessage.role === 'assistant' && 
-            lastMessage.id !== lastProcessedMessageId.current &&
-            lastMessage.content.some(c => c.type === 'text' && c.text.trim().length > 0) &&
-            !isGeneratingCode && 
-            !gameCode) {
-          
-          // Mark this message as processed
-          lastProcessedMessageId.current = lastMessage.id;
-          
-          // Generate code immediately (no delay needed since streaming is done)
-          generateGameCode();
-        }
-      }
-    };
-
-    // Initial check
-    handleMessageUpdate();
-
-    // Subscribe to thread updates
-    return threadRuntime.subscribe(() => {
-      handleMessageUpdate();
-    });
-  }, [threadRuntime, generateGameCode, isGeneratingCode, gameCode]);
-
+const GamePreview = ({
+  onAssistantTurnEnd,
+  gameCode,
+}: {
+  onAssistantTurnEnd?: (args: { messages: { id: string; role: string; content: string }[] }) => void;
+  gameCode: string;
+}) => {
   return (
     <div className="flex h-dvh w-full pr-0.5">
-      <AppSidebar />
+      <AppSidebar onAssistantTurnEnd={onAssistantTurnEnd} />
       <SidebarInset className="bg-gray-900">
         <div className="flex-1 overflow-hidden p-4 bg-gray-900">
           <WebPreview>
@@ -177,9 +34,7 @@ const GamePreview = () => {
               <WebPreviewUrl disabled value={gameCode ? "Generated Game" : "Ready for your game..."} />
             </WebPreviewNavigation>
             {gameCode ? (
-              <WebPreviewBody 
-                src={`data:text/html;charset=utf-8,${encodeURIComponent(gameCode)}`}
-              />
+              <WebPreviewBody src={`data:text/html;charset=utf-8,${encodeURIComponent(gameCode)}`} />
             ) : (
               <div className="flex-1 bg-white flex items-center justify-center rounded-b-lg">
                 <div className="text-center space-y-4 text-muted-foreground">
@@ -188,12 +43,7 @@ const GamePreview = () => {
                 </div>
               </div>
             )}
-            {consoleLogs.length > 0 && (
-              <WebPreviewConsole 
-                logs={consoleLogs}
-                onClearLogs={clearConsoleLogs}
-              />
-            )}
+            <WebPreviewConsole />
           </WebPreview>
         </div>
       </SidebarInset>
@@ -202,13 +52,72 @@ const GamePreview = () => {
 };
 
 export const Assistant = () => {
-  const runtime = useChatRuntime();
+  const [gameCode, setGameCode] = useState("");
+  const isGeneratingRef = useRef(false);
+  const lastProcessedAssistantId = useRef<string | null>(null);
+
+  const generateFromConversation = useCallback(
+    async (payload: { messages: { id: string; role: string; content: string }[] }) => {
+      if (isGeneratingRef.current || gameCode) return;
+      const last = payload.messages[payload.messages.length - 1];
+      if (!last || last.role !== "assistant") return;
+      if (lastProcessedAssistantId.current === last.id) return;
+
+      lastProcessedAssistantId.current = last.id;
+      isGeneratingRef.current = true;
+      try {
+        const response = await fetch("/api/generate-code", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ messages: payload.messages }),
+        });
+        if (!response.ok || !response.body) throw new Error(`HTTP ${response.status}`);
+
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = "";
+        let fullText = "";
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          buffer += decoder.decode(value, { stream: true });
+          // Minimal parsing for AI SDK DataStream frames: lines starting with "data: {..}"
+          const lines = buffer.split(/\n/);
+          buffer = lines.pop() || "";
+          for (const line of lines) {
+            const trimmed = line.trim();
+            if (!trimmed.startsWith("data:")) continue;
+            const json = trimmed.slice(5).trim();
+            if (json === "[DONE]") continue;
+            try {
+              const evt = JSON.parse(json);
+              // Accumulate incremental text deltas
+              if (evt.type === "text-delta" && typeof evt.delta === "string") {
+                fullText += evt.delta;
+              }
+              if (evt.type === "message" && typeof evt.text === "string") {
+                fullText += evt.text;
+              }
+            } catch {
+              // ignore partial frames
+            }
+          }
+        }
+
+        const extracted = extractHtmlFromMessage(fullText);
+        if (extracted) setGameCode(extracted);
+      } catch (err) {
+        console.error("Code generation error:", err);
+      } finally {
+        isGeneratingRef.current = false;
+      }
+    },
+    [gameCode]
+  );
 
   return (
-    <AssistantRuntimeProvider runtime={runtime}>
-      <SidebarProvider>
-        <GamePreview />
-      </SidebarProvider>
-    </AssistantRuntimeProvider>
+    <SidebarProvider>
+      <GamePreview onAssistantTurnEnd={generateFromConversation} gameCode={gameCode} />
+    </SidebarProvider>
   );
 };

@@ -3,7 +3,9 @@
     "allow": [
       "WebFetch(domain:assistant-ui.com)",
       "Bash(npm run build:*)",
-      "Bash(npm run lint)"
+      "Bash(npm run lint)",
+      "WebFetch(domain:www.assistant-ui.com)",
+      "WebFetch(domain:ai-sdk.dev)"
     ],
     "deny": [],
     "ask": []

@@ -1,6 +1,6 @@
 # Game0 - AI Game Generator
 
-This is an AI-powered game generation application built with [assistant-ui](https://github.com/Yonom/assistant-ui). It allows users to describe games in natural language and generates complete, playable HTML games.
+This is an AI-powered game generation application built with [Vercel AI SDK 5](https://ai-sdk.dev) and streaming chat UI. It allows users to describe games in natural language and generates complete, playable HTML games.
 
 ## Getting Started
 
