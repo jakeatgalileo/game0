@@ -195,7 +195,7 @@ const AssistantMessage: FC = () => {
         </div>
 
         {/* aui-assistant-message-content */}
-        <div className="text-white col-span-2 col-start-2 row-start-1 ml-4 leading-7 break-words font-[family-name:var(--font-geist-sans)]">
+        <div className="text-white col-span-2 col-start-2 row-start-1 ml-4 leading-6 break-words font-[family-name:var(--font-geist-sans)]">
           <MessagePrimitive.Content
             components={{
               Text: MarkdownText,
@@ -255,7 +255,7 @@ const UserMessage: FC = () => {
         <UserActionBar />
 
         {/* aui-user-message-content */}
-        <div className="bg-muted text-foreground col-start-2 rounded-3xl px-5 py-2.5 break-words">
+        <div className="bg-slate-800 text-white col-start-2 rounded-3xl px-5 py-2.5 break-words">
           <MessagePrimitive.Content components={{ Text: MarkdownText }} />
         </div>
 

@@ -85,7 +85,7 @@ export const WebPreviewNavigation = ({
   ...props
 }: WebPreviewNavigationProps) => (
   <div
-    className={cn('flex items-center gap-2 border-b border-gray-700 bg-gray-800 px-4 py-2', className)}
+    className={cn('flex items-center gap-2 border-b border-gray-700 bg-gray-800 px-4 py-2 rounded-t-lg', className)}
     {...props}
   >
     <div className="flex items-center gap-1">
@@ -181,7 +181,7 @@ export const WebPreviewBody = ({
   const { url } = useWebPreview();
 
   return (
-    <div className="flex-1">
+    <div className="flex-1 rounded-b-lg overflow-hidden">
       <iframe
         className={cn('size-full', className)}
         sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-presentation"
@@ -214,7 +214,7 @@ export const WebPreviewConsole = ({
 
   return (
     <Collapsible
-      className={cn('border-t bg-muted/50 font-mono text-sm', className)}
+      className={cn('border-t bg-muted/50 font-mono text-sm rounded-b-lg', className)}
       onOpenChange={setConsoleOpen}
       open={consoleOpen}
       {...props}

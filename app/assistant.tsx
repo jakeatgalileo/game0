@@ -58,6 +58,14 @@ const GamePreview = () => {
       // Get current conversation messages
       const state = threadRuntime.getState();
       const messages = state.messages;
+      
+      // Debug: Log the actual message structure
+      console.log('=== DEBUGGING MESSAGES ===');
+      console.log('state.messages length:', messages?.length);
+      console.log('First message structure:', messages[0]);
+      console.log('First message content:', messages[0]?.content);
+      console.log('All messages:', JSON.stringify(messages, null, 2));
+      console.log('=========================');
 
       addConsoleLog('info', 'Calling code generation API...');
       
@@ -173,7 +181,7 @@ const GamePreview = () => {
                 src={`data:text/html;charset=utf-8,${encodeURIComponent(gameCode)}`}
               />
             ) : (
-              <div className="flex-1 bg-white flex items-center justify-center">
+              <div className="flex-1 bg-white flex items-center justify-center rounded-b-lg">
                 <div className="text-center space-y-4 text-muted-foreground">
                   <div className="text-4xl opacity-30">🎮</div>
                   <p className="text-lg">Your game will appear here</p>

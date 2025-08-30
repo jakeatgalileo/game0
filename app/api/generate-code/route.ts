@@ -6,6 +6,14 @@ import {
 } from "ai";
 import { loadPromptWithHotReload } from "@/lib/prompts";
 
+// Transform @assistant-ui messages to AI SDK format
+const transformToAISDKFormat = (message: any): UIMessage => {
+  return {
+    role: message.role,
+    content: message.content
+  };
+};
+
 export async function POST(req: Request) {
   try {
     // Check environment variables
@@ -15,17 +23,14 @@ export async function POST(req: Request) {
     }
     
     const { messages }: { messages: UIMessage[] } = await req.json();
-    console.log('Received messages:', messages?.length || 0, 'messages');
-    
-    console.log('Loading system prompt...');
     const systemPrompt = await loadPromptWithHotReload('code-generation');
-    console.log('System prompt loaded successfully, length:', systemPrompt.length);
 
-    console.log('Initializing OpenAI model...');
+    const cleanMessages = messages.map(transformToAISDKFormat);
+
     const result = streamText({
-      model: openai("gpt-4o-mini"),
+      model: openai("gpt-5-mini"),
       system: systemPrompt,
-      messages: convertToModelMessages(messages),
+      messages: convertToModelMessages(cleanMessages),
       providerOptions:{
         openai:{
           textVerbosity: "medium",
