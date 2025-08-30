@@ -15,40 +15,22 @@ export async function POST(req: Request) {
     
     const systemPrompt = await loadPromptWithHotReload("game-planning")
 
-    console.log("📥 Incoming Messages:", messages);
-
     const result = streamText({
-      // Use a reasoning-capable model; gpt-5 with reasoningEffort or switch to o3-mini
-      model: openai("gpt-5-mini"),
+      model: openai("gpt-5-mini-2025-08-07"),
       system: systemPrompt,
       messages: convertToModelMessages(messages),
       providerOptions: {
         openai: {
+          reasoningSummary: 'auto',
           textVerbosity: "medium",
           reasoningEffort: "medium",
         },
       },
     });
 
-    // Log the response structure when complete
-    result.finishReason.then((finishReason) => {
-      console.log("✅ Stream finished with reason:", finishReason);
-    });
-
-    result.text.then((text) => {
-      console.log("📝 Final text response:", text);
-    });
-
-    result.reasoning.then((reasoning) => {
-      console.log("🧠 Reasoning content:", reasoning);
-    });
-
-    const response = result.toUIMessageStreamResponse({sendReasoning: true});
-    console.log("🚀 Sending UIMessage stream response with reasoning enabled");
-    
-    return response;
+    return result.toUIMessageStreamResponse({sendReasoning: true});
   } catch (error) {
-    console.log("ERROR: ", error)
+    console.log("Chat API Error:", error)
     return new Response("Internal Server Error", { status: 500 });
   }
 }
