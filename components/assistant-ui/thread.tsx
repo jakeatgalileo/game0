@@ -8,7 +8,6 @@ import {
 } from "@assistant-ui/react";
 import type { FC } from "react";
 import {
-  ArrowDownIcon,
   ArrowUpIcon,
   PlusIcon,
   CopyIcon,
@@ -60,20 +59,6 @@ export const Thread: FC = () => {
   );
 };
 
-const ThreadScrollToBottom: FC = () => {
-  return (
-    <ThreadPrimitive.ScrollToBottom asChild>
-      <TooltipIconButton
-        tooltip="Scroll to bottom"
-        variant="outline"
-        // aui-thread-scroll-to-bottom
-        className="dark:bg-background dark:hover:bg-accent absolute -top-12 z-10 self-center rounded-full p-4 disabled:invisible"
-      >
-        <ArrowDownIcon />
-      </TooltipIconButton>
-    </ThreadPrimitive.ScrollToBottom>
-  );
-};
 
 const ThreadWelcome: FC = () => {
   return (
@@ -92,17 +77,7 @@ const ThreadWelcome: FC = () => {
               // aui-thread-welcome-message-motion-1
               className="text-2xl font-semibold"
             >
-              Hello there!
-            </motion.div>
-            <motion.div
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: 10 }}
-              transition={{ delay: 0.6 }}
-              // aui-thread-welcome-message-motion-2
-              className="text-muted-foreground/65 text-2xl"
-            >
-              How can I help you today?
+              What game do you want to build?
             </motion.div>
           </div>
         </div>
@@ -116,12 +91,11 @@ const Composer: FC = () => {
   return (
     // aui-composer-wrapper
     <div className="bg-background relative mx-auto flex w-full max-w-[var(--thread-max-width)] flex-col gap-4 px-[var(--thread-padding-x)] pb-4 md:pb-6">
-      <ThreadScrollToBottom />
       {/* aui-composer-root */}
       <ComposerPrimitive.Root className="focus-within::ring-offset-2 relative flex w-full flex-col rounded-2xl focus-within:ring-2 focus-within:ring-black dark:focus-within:ring-white">
         {/* aui-composer-input */}
         <ComposerPrimitive.Input
-          placeholder="Send a message..."
+          placeholder="Describe your game idea..."
           className={
             "bg-muted border-border dark:border-muted-foreground/15 focus:outline-primary placeholder:text-muted-foreground max-h-[calc(50dvh)] min-h-16 w-full resize-none rounded-t-2xl border-x border-t px-4 pt-2 pb-3 text-base outline-none"
           }

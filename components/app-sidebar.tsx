@@ -8,7 +8,7 @@ import { Thread } from "./assistant-ui/thread"
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   return (
-    <Sidebar {...props}>
+    <Sidebar collapsible="none" {...props}>
       <SidebarContent className="p-0">
         <Thread />
       </SidebarContent>
