@@ -15,7 +15,7 @@ export async function POST(req: Request) {
     
     const systemPrompt = await loadPromptWithHotReload("game-planning")
 
-    console.log("Messages:", messages);
+    console.log("📥 Incoming Messages:", messages);
 
     const result = streamText({
       // Use a reasoning-capable model; gpt-5 with reasoningEffort or switch to o3-mini
@@ -30,7 +30,23 @@ export async function POST(req: Request) {
       },
     });
 
-    return result.toUIMessageStreamResponse({sendReasoning: true,});
+    // Log the response structure when complete
+    result.finishReason.then((finishReason) => {
+      console.log("✅ Stream finished with reason:", finishReason);
+    });
+
+    result.text.then((text) => {
+      console.log("📝 Final text response:", text);
+    });
+
+    result.reasoning.then((reasoning) => {
+      console.log("🧠 Reasoning content:", reasoning);
+    });
+
+    const response = result.toUIMessageStreamResponse({sendReasoning: true});
+    console.log("🚀 Sending UIMessage stream response with reasoning enabled");
+    
+    return response;
   } catch (error) {
     console.log("ERROR: ", error)
     return new Response("Internal Server Error", { status: 500 });
