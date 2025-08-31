@@ -10,6 +10,7 @@ import {
   WebPreviewBody,
   WebPreviewConsole,
 } from "@/components/web-preview";
+import { UIMessage } from "@ai-sdk/react";
 
 const extractHtmlFromMessage = (content: string): string | null => {
   const htmlCodeBlockRegex = /```html\n([\s\S]*?)\n```/g;
@@ -21,14 +22,14 @@ const GamePreview = ({
   onAssistantTurnEnd,
   gameCode,
 }: {
-  onAssistantTurnEnd?: (args: { messages: { id: string; role: string; content: string }[] }) => void;
+  onAssistantTurnEnd?: (args: { messages: UIMessage[] }) => void;
   gameCode: string;
 }) => {
   return (
     <div className="flex h-dvh w-full pr-0.5">
       <AppSidebar onAssistantTurnEnd={onAssistantTurnEnd} />
-      <SidebarInset className="bg-gray-900">
-        <div className="flex-1 overflow-hidden p-4 bg-gray-900">
+      <SidebarInset className="bg-background">
+        <div className="flex-1 overflow-hidden p-4 bg-background">
           <WebPreview>
             <WebPreviewNavigation>
               <WebPreviewUrl disabled value={gameCode ? "Generated Game" : "Ready for your game..."} />
@@ -36,7 +37,7 @@ const GamePreview = ({
             {gameCode ? (
               <WebPreviewBody src={`data:text/html;charset=utf-8,${encodeURIComponent(gameCode)}`} />
             ) : (
-              <div className="flex-1 bg-white flex items-center justify-center rounded-b-lg">
+              <div className="flex-1 bg-background flex items-center justify-center rounded-b-lg">
                 <div className="text-center space-y-4 text-muted-foreground">
                   <div className="text-4xl opacity-30">🎮</div>
                   <p className="text-lg">Your game will appear here</p>
@@ -57,7 +58,7 @@ export const Assistant = () => {
   const lastProcessedAssistantId = useRef<string | null>(null);
 
   const generateFromConversation = useCallback(
-    async (payload: { messages: { id: string; role: string; content: string }[] }) => {
+    async (payload: { messages: UIMessage[] }) => {
       if (isGeneratingRef.current || gameCode) return;
       const last = payload.messages[payload.messages.length - 1];
       if (!last || last.role !== "assistant") return;

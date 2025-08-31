@@ -5,7 +5,9 @@
       "Bash(npm run build:*)",
       "Bash(npm run lint)",
       "WebFetch(domain:www.assistant-ui.com)",
-      "WebFetch(domain:ai-sdk.dev)"
+      "WebFetch(domain:ai-sdk.dev)",
+      "Read(/var/folders/28/dngpq1dn58bgs2m236vxkfyr0000gn/T/TemporaryItems/NSIRD_screencaptureui_A42odH/**)",
+      "Read(/var/folders/28/dngpq1dn58bgs2m236vxkfyr0000gn/T/TemporaryItems/NSIRD_screencaptureui_FsXxcE/**)"
     ],
     "deny": [],
     "ask": []
