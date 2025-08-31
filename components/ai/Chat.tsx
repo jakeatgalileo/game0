@@ -17,7 +17,11 @@ type ChatProps = {
 
 export function Chat({ className, onAssistantTurnEnd }: ChatProps) {
   const [input, setInput] = useState("");
-  const { messages, sendMessage, status } = useChat();
+  const { messages, sendMessage, status } = useChat({
+    onFinish() {
+      onAssistantTurnEnd?.({ messages });
+    },
+  });
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();

@@ -67,10 +67,14 @@ export const Assistant = () => {
       lastProcessedAssistantId.current = last.id;
       isGeneratingRef.current = true;
       try {
+        const sanitized = payload.messages.map((m) => ({
+          ...m,
+          parts: m.parts?.filter((p) => p.type === "text"),
+        }));
         const response = await fetch("/api/generate-code", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ messages: payload.messages }),
+          body: JSON.stringify({ messages: sanitized }),
         });
         if (!response.ok || !response.body) throw new Error(`HTTP ${response.status}`);
 
