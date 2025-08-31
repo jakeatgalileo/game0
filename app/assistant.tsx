@@ -29,7 +29,7 @@ const GamePreview = ({
     <div className="flex h-dvh w-full pr-0.5">
       <AppSidebar onAssistantTurnEnd={onAssistantTurnEnd} />
       <SidebarInset className="bg-background">
-        <div className="flex-1 overflow-hidden p-4 bg-background">
+        <div className="flex-1 overflow-hidden pl-2 pr-4 py-4 bg-background">
           <WebPreview>
             <WebPreviewNavigation>
               <WebPreviewUrl disabled value={gameCode ? "Generated Game" : "Ready for your game..."} />

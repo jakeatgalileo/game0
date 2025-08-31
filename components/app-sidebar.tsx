@@ -7,9 +7,9 @@ export function AppSidebar({ onAssistantTurnEnd, ...props }: React.ComponentProp
   onAssistantTurnEnd?: (args: { messages: UIMessage[] }) => void;
 }) {
   return (
-    <Sidebar collapsible="none" className="bg-sidebar border-sidebar-border" {...props}>
-      <SidebarContent className="p-0 bg-sidebar">
-        <Chat onAssistantTurnEnd={onAssistantTurnEnd} />
+    <Sidebar collapsible="none" className="bg-background border-sidebar-border" {...props}>
+      <SidebarContent className="p-0 bg-background">
+        <Chat onAssistantTurnEnd={onAssistantTurnEnd} className="py-4" />
       </SidebarContent>
       <SidebarRail />
     </Sidebar>
