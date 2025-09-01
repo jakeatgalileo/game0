@@ -2,12 +2,11 @@
 
 import { useState } from "react";
 import { cn } from "@/lib/utils";
-import { Conversation, ConversationContent, ConversationScrollButton } from "@/components/ai-elements/conversation";
+import { Conversation, ConversationContent } from "@/components/ai-elements/conversation";
 import { Message, MessageContent } from "@/components/ai-elements/message";
 import { Response } from "@/components/ai-elements/response";
 import { Reasoning, ReasoningContent, ReasoningTrigger } from "@/components/ai-elements/reasoning";
 import { PromptInput, PromptInputTextarea, PromptInputToolbar, PromptInputSubmit } from "@/components/ai-elements/prompt-input";
-import { Loader } from "@/components/ai-elements/loader";
 import { UIMessage, useChat } from "@ai-sdk/react";
 
 type ChatProps = {
@@ -80,9 +79,7 @@ export function Chat({ className, onAssistantTurnEnd }: ChatProps) {
               </Message>
             ))}
 
-            {status === "streaming" && <Loader />}
           </ConversationContent>
-          <ConversationScrollButton />
         </Conversation>
       </div>
 
