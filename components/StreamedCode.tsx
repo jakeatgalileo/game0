@@ -114,9 +114,9 @@ const StreamedCode = forwardRef<StreamedCodeHandle, StreamedCodeProps>(
           </Highlight>
         </div>
 
-        {/* Edge fades (top & bottom) */}
-        <div className="pointer-events-none absolute inset-x-0 top-0 h-6 bg-gradient-to-b from-background to-transparent" />
-        <div className="pointer-events-none absolute inset-x-0 bottom-0 h-6 bg-gradient-to-t from-background to-transparent" />
+        {/* Enhanced edge fades with blur (top & bottom) */}
+        <div className="pointer-events-none absolute inset-x-0 top-0 h-12 bg-gradient-to-b from-background via-background/80 to-transparent backdrop-blur-sm" />
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 h-12 bg-gradient-to-t from-background via-background/80 to-transparent backdrop-blur-sm" />
       </div>
     )
   }

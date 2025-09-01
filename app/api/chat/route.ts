@@ -12,7 +12,7 @@ export async function POST(req: Request) {
     const systemPrompt = await loadPromptWithHotReload("game-planning")
 
     const result = streamText({
-      model: "openai/gpt-5-nano-2025-08-07",
+      model: "openai/gpt-5-mini-2025-08-07",
       system: systemPrompt,
       messages: convertToModelMessages(messages),
       providerOptions: {

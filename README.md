@@ -4,10 +4,10 @@ This is an AI-powered game generation application built with [Vercel AI SDK 5](h
 
 ## Getting Started
 
-First, add your OpenAI API key to `.env.local` file:
+First, add your Vercel AI Gateway API key to `.env.local` file:
 
 ```
-OPENAI_API_KEY=sk-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+AI_GATEWAY_API_KEY=sk-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 ```
 
 Then, run the development server:
@@ -40,3 +40,7 @@ Open [http://localhost:3000](http://localhost:3000) with your browser to see the
 4. Play your generated game directly in the browser preview
 
 You can modify the system prompts in the `prompts/` directory to customize the AI behavior for game planning and code generation.
+
+# TODO + Improvements
+
+1. Either websearch for references to existing games and pull in those resources during runtimes or build an asset library to reference from.

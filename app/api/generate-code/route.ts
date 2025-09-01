@@ -20,7 +20,7 @@ export async function POST(req: Request) {
       messages: convertToModelMessages(messages),
       providerOptions: {
         openai: {
-          textVerbosity: "low",
+          textVerbosity: "medium",
           reasoningEffort: "low",
         },
       },

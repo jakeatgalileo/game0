@@ -25,6 +25,7 @@ Quality bar:
 - Controls responsive and debounced as needed.
 - HUD shows score/state if specified.
 - No unused code.
+- Do *NOT* generate code comments
 
 Output:
 Wrap the full game in triple backticks with the html language tag.
