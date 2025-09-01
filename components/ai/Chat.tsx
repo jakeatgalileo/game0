@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { cn } from "@/lib/utils";
-import { Conversation, ConversationContent } from "@/components/ai-elements/conversation";
+import { Conversation, ConversationContent, ConversationScrollButton } from "@/components/ai-elements/conversation";
 import { Message, MessageContent } from "@/components/ai-elements/message";
 import { Response } from "@/components/ai-elements/response";
 import { Reasoning, ReasoningContent, ReasoningTrigger } from "@/components/ai-elements/reasoning";
@@ -16,11 +16,7 @@ type ChatProps = {
 
 export function Chat({ className, onAssistantTurnEnd }: ChatProps) {
   const [input, setInput] = useState("");
-  const { messages, sendMessage, status } = useChat({
-    onFinish() {
-      onAssistantTurnEnd?.({ messages });
-    },
-  });
+  const { messages, sendMessage, status } = useChat();
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -80,19 +76,20 @@ export function Chat({ className, onAssistantTurnEnd }: ChatProps) {
             ))}
 
           </ConversationContent>
+          <ConversationScrollButton />
         </Conversation>
       </div>
 
       <div className="mx-auto w-full max-w-[48rem] px-4">
-        <PromptInput onSubmit={handleSubmit} className="w-full pb-4 md:pb-6 border-border">
+        <PromptInput onSubmit={handleSubmit} className="relative w-full border-border">
           <PromptInputTextarea
             value={input}
             onChange={(e) => setInput(e.target.value)}
             placeholder="Describe your game idea..."
-            className="text-foreground placeholder:text-muted-foreground bg-input border-input focus:border-ring"
+            className="text-foreground placeholder:text-muted-foreground bg-input border-input focus:border-ring resize-none pr-14 pb-14"
           />
-          <PromptInputToolbar>
-            <div />
+
+          <PromptInputToolbar className="absolute inset-x-0 bottom-0 flex items-center justify-end p-3">
             <PromptInputSubmit disabled={!input} status={status} />
           </PromptInputToolbar>
         </PromptInput>
