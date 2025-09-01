@@ -2,6 +2,7 @@
 
 import React, { useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState, forwardRef } from "react"
 import { Highlight, themes, Language } from "prism-react-renderer"
+import { cn } from "@/lib/utils"
 
 // Public API for parents to push chunks
 export type StreamedCodeHandle = {
@@ -47,7 +48,7 @@ const StreamedCode = forwardRef<StreamedCodeHandle, StreamedCodeProps>(
   (
     {
       language = "markup",
-      className = "",
+      className,
       autoScroll = true,
       maxLines,
       stream,
@@ -95,7 +96,7 @@ const StreamedCode = forwardRef<StreamedCodeHandle, StreamedCodeProps>(
     const theme = useMemo(() => themes.github, [])
 
     return (
-      <div className={`relative w-full h-full rounded-xl bg-neutral-950 text-neutral-100 p-6 md:p-8 ${className}`}>
+      <div className={cn("relative rounded-xl bg-background text-foreground p-6 md:p-8", className)}>
         {/* Code viewport (fills container) */}
         <div ref={viewportRef} className="h-full overflow-auto no-scrollbar">
           <Highlight theme={theme} code={code} language={language}>
@@ -114,8 +115,8 @@ const StreamedCode = forwardRef<StreamedCodeHandle, StreamedCodeProps>(
         </div>
 
         {/* Edge fades (top & bottom) */}
-        <div className="pointer-events-none absolute inset-x-0 top-0 h-6 bg-gradient-to-b from-neutral-950 to-transparent" />
-        <div className="pointer-events-none absolute inset-x-0 bottom-0 h-6 bg-gradient-to-t from-neutral-950 to-transparent" />
+        <div className="pointer-events-none absolute inset-x-0 top-0 h-6 bg-gradient-to-b from-background to-transparent" />
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 h-6 bg-gradient-to-t from-background to-transparent" />
       </div>
     )
   }
