@@ -95,22 +95,9 @@ const StreamedCode = forwardRef<StreamedCodeHandle, StreamedCodeProps>(
     const theme = useMemo(() => themes.github, [])
 
     return (
-      <div className={`w-full rounded-2xl border bg-neutral-950 text-neutral-100 shadow-sm ${className}`}>
-        {/* Header */}
-        <div className="flex items-center justify-between px-3 py-2 border-b border-neutral-800">
-          <div className="flex items-center gap-2 text-sm">
-            <span className="inline-block h-2 w-2 rounded-full bg-emerald-500" />
-            <span className="font-medium text-neutral-200">{title}</span>
-          </div>
-          <div className="flex gap-1 opacity-70">
-            <span className="h-3 w-3 rounded-full bg-red-500" />
-            <span className="h-3 w-3 rounded-full bg-amber-400" />
-            <span className="h-3 w-3 rounded-full bg-green-500" />
-          </div>
-        </div>
-
-        {/* Code viewport */}
-        <div ref={viewportRef} className="max-h-[50vh] overflow-y-auto p-3">
+      <div className={`relative w-full h-full rounded-xl bg-neutral-950 text-neutral-100 p-6 md:p-8 ${className}`}>
+        {/* Code viewport (fills container) */}
+        <div ref={viewportRef} className="h-full overflow-auto no-scrollbar">
           <Highlight theme={theme} code={code} language={language}>
             {({ className: c, style, tokens, getLineProps, getTokenProps }) => (
               <pre className={`${c} m-0 font-mono text-[13px] leading-6`} style={{ ...style, background: "transparent" }}>
@@ -125,6 +112,10 @@ const StreamedCode = forwardRef<StreamedCodeHandle, StreamedCodeProps>(
             )}
           </Highlight>
         </div>
+
+        {/* Edge fades (top & bottom) */}
+        <div className="pointer-events-none absolute inset-x-0 top-0 h-6 bg-gradient-to-b from-neutral-950 to-transparent" />
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 h-6 bg-gradient-to-t from-neutral-950 to-transparent" />
       </div>
     )
   }

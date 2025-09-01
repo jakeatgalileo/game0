@@ -44,12 +44,12 @@ const GamePreview = ({
               <WebPreviewUrl disabled value={gameCode ? "Generated Game" : "Ready for your game..."} />
             </WebPreviewNavigation>
             {isGenerating ? (
-              <div className="flex-1 bg-background p-4 overflow-hidden">
+              <div className="flex-1 bg-background p-6 overflow-hidden flex items-center justify-center">
                 <StreamedCode
                   ref={streamedCodeRef}
                   title="Generating Game Code..."
                   language="markup"
-                  className="h-full"
+                  className="h-[60%] w-[65%]"
                 />
               </div>
             ) : gameCode ? (
