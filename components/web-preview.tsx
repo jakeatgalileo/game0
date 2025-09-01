@@ -16,7 +16,7 @@ import {
 import { cn } from '@/lib/utils';
 import { ChevronDownIcon } from 'lucide-react';
 import type { ComponentProps, ReactNode } from 'react';
-import { createContext, useContext, useState } from 'react';
+import { createContext, useContext, useEffect, useRef, useState } from 'react';
 
 export type WebPreviewContextValue = {
   url: string;
@@ -165,14 +165,44 @@ export const WebPreviewBody = ({
   ...props
 }: WebPreviewBodyProps) => {
   const { url } = useWebPreview();
+  const iframeRef = useRef<HTMLIFrameElement>(null);
+
+  const applyScale = () => {
+    const iframe = iframeRef.current;
+    const body = iframe?.contentDocument?.body;
+    if (!iframe || !body) return;
+
+    const { scrollWidth, scrollHeight } = body;
+    const { clientWidth, clientHeight } = iframe;
+    const scale = Math.min(
+      clientWidth / scrollWidth,
+      clientHeight / scrollHeight
+    );
+
+    body.style.transform = `scale(${scale})`;
+    body.style.transformOrigin = 'top left';
+    body.style.width = `${scrollWidth}px`;
+    body.style.height = `${scrollHeight}px`;
+    body.style.overflow = 'hidden';
+  };
+
+  useEffect(() => {
+    const iframe = iframeRef.current;
+    if (!iframe) return;
+    const observer = new ResizeObserver(applyScale);
+    observer.observe(iframe);
+    return () => observer.disconnect();
+  }, []);
 
   return (
     <div className="flex-1">
       <iframe
+        ref={iframeRef}
         className={cn('size-full', className)}
         sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-presentation"
         src={(src ?? url) || undefined}
         title="Preview"
+        onLoad={applyScale}
         {...props}
       />
       {loading}
