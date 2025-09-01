@@ -165,3 +165,13 @@
 .no-scrollbar::-webkit-scrollbar {
   display: none; /* Chrome, Safari, Opera */
 }
+
+/* Masked backdrop-blur utilities for edge fades */
+.mask-fade-top {
+  -webkit-mask-image: linear-gradient(to bottom, rgba(0,0,0,1), rgba(0,0,0,0));
+          mask-image: linear-gradient(to bottom, rgba(0,0,0,1), rgba(0,0,0,0));
+}
+.mask-fade-bottom {
+  -webkit-mask-image: linear-gradient(to top, rgba(0,0,0,1), rgba(0,0,0,0));
+          mask-image: linear-gradient(to top, rgba(0,0,0,1), rgba(0,0,0,0));
+}

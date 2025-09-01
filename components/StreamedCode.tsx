@@ -96,7 +96,7 @@ const StreamedCode = forwardRef<StreamedCodeHandle, StreamedCodeProps>(
     const theme = useMemo(() => themes.github, [])
 
     return (
-      <div className={cn("relative rounded-xl bg-background text-foreground p-6 md:p-8", className)}>
+      <div className={cn("relative rounded-xl bg-background text-foreground p-6 md:p-8 overflow-hidden", className)}>
         {/* Code viewport (fills container) */}
         <div ref={viewportRef} className="h-full overflow-auto no-scrollbar">
           <Highlight theme={theme} code={code} language={language}>
@@ -114,9 +114,9 @@ const StreamedCode = forwardRef<StreamedCodeHandle, StreamedCodeProps>(
           </Highlight>
         </div>
 
-        {/* Enhanced edge fades with blur (top & bottom) */}
-        <div className="pointer-events-none absolute inset-x-0 top-0 h-12 bg-gradient-to-b from-background via-background/80 to-transparent backdrop-blur-sm" />
-        <div className="pointer-events-none absolute inset-x-0 bottom-0 h-12 bg-gradient-to-t from-background via-background/80 to-transparent backdrop-blur-sm" />
+        {/* Edge fades with gradient-masked backdrop blur (subtle near content, stronger at edges) */}
+        <div className="pointer-events-none absolute inset-x-0 top-0 h-24 md:h-32 backdrop-blur-sm md:backdrop-blur mask-fade-top" />
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 h-24 md:h-32 backdrop-blur-sm md:backdrop-blur mask-fade-bottom" />
       </div>
     )
   }
