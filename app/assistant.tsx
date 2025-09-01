@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/app-sidebar";
 import {
@@ -11,19 +11,28 @@ import {
   WebPreviewConsole,
 } from "@/components/web-preview";
 import { UIMessage } from "@ai-sdk/react";
+import StreamedCode, { StreamedCodeHandle } from "@/components/StreamedCode";
 
 const extractHtmlFromMessage = (content: string): string | null => {
-  const htmlCodeBlockRegex = /```html\n([\s\S]*?)\n```/g;
-  const match = htmlCodeBlockRegex.exec(content);
-  return match ? match[1].trim() : null;
+  // Be lenient: allow optional newline before closing backticks and CRLFs
+  const htmlFence = /```html\r?\n([\s\S]*?)\r?\n?```/i;
+  const m = htmlFence.exec(content);
+  if (m && m[1]) return m[1].trim();
+  // Fallback: if the content looks like raw HTML, return it directly
+  if (/<!DOCTYPE html|<html[\s>]/i.test(content)) return content.trim();
+  return null;
 };
 
 const GamePreview = ({
   onAssistantTurnEnd,
   gameCode,
+  isGenerating,
+  streamedCodeRef,
 }: {
   onAssistantTurnEnd?: (args: { messages: UIMessage[] }) => void;
   gameCode: string;
+  isGenerating: boolean;
+  streamedCodeRef: React.RefObject<StreamedCodeHandle | null>;
 }) => {
   return (
     <div className="flex h-dvh w-full pr-0.5">
@@ -34,7 +43,16 @@ const GamePreview = ({
             <WebPreviewNavigation>
               <WebPreviewUrl disabled value={gameCode ? "Generated Game" : "Ready for your game..."} />
             </WebPreviewNavigation>
-            {gameCode ? (
+            {isGenerating ? (
+              <div className="flex-1 bg-background p-4 overflow-hidden">
+                <StreamedCode
+                  ref={streamedCodeRef}
+                  title="Generating Game Code..."
+                  language="markup"
+                  className="h-full"
+                />
+              </div>
+            ) : gameCode ? (
               <WebPreviewBody src={`data:text/html;charset=utf-8,${encodeURIComponent(gameCode)}`} />
             ) : (
               <div className="flex-1 bg-background flex items-center justify-center rounded-b-lg">
@@ -54,18 +72,31 @@ const GamePreview = ({
 
 export const Assistant = () => {
   const [gameCode, setGameCode] = useState("");
+  const [isGenerating, setIsGenerating] = useState(false);
   const isGeneratingRef = useRef(false);
   const lastProcessedAssistantId = useRef<string | null>(null);
+  const streamedCodeRef = useRef<StreamedCodeHandle | null>(null);
+
+  // Persist the last generated HTML locally so it survives refreshes during dev
+  // (In production, consider storing in a DB or object storage.)
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem("gameCodeHtml");
+      if (saved) setGameCode(saved);
+    } catch {}
+  }, []);
 
   const generateFromConversation = useCallback(
     async (payload: { messages: UIMessage[] }) => {
-      if (isGeneratingRef.current || gameCode) return;
+      if (isGeneratingRef.current) return;
       const last = payload.messages[payload.messages.length - 1];
       if (!last || last.role !== "assistant") return;
       if (lastProcessedAssistantId.current === last.id) return;
 
       lastProcessedAssistantId.current = last.id;
       isGeneratingRef.current = true;
+      setIsGenerating(true);
+      streamedCodeRef.current?.clear();
       try {
         const sanitized = payload.messages.map((m) => ({
           ...m,
@@ -80,49 +111,67 @@ export const Assistant = () => {
 
         const reader = response.body.getReader();
         const decoder = new TextDecoder();
+        const isSSE = /text\/event-stream/i.test(response.headers.get("content-type") || "");
         let buffer = "";
         let fullText = "";
         while (true) {
           const { done, value } = await reader.read();
           if (done) break;
           buffer += decoder.decode(value, { stream: true });
-          // Minimal parsing for AI SDK DataStream frames: lines starting with "data: {..}"
-          const lines = buffer.split(/\n/);
-          buffer = lines.pop() || "";
-          for (const line of lines) {
-            const trimmed = line.trim();
-            if (!trimmed.startsWith("data:")) continue;
-            const json = trimmed.slice(5).trim();
-            if (json === "[DONE]") continue;
-            try {
-              const evt = JSON.parse(json);
-              // Accumulate incremental text deltas
-              if (evt.type === "text-delta" && typeof evt.delta === "string") {
-                fullText += evt.delta;
+          if (isSSE) {
+            // Parse AI SDK UI Message Stream frames: lines starting with "data: {..}"
+            const lines = buffer.split(/\n/);
+            buffer = lines.pop() || "";
+            for (const line of lines) {
+              const trimmed = line.trim();
+              if (!trimmed.startsWith("data:")) continue;
+              const json = trimmed.slice(5).trim();
+              if (json === "[DONE]") continue;
+              try {
+                const evt = JSON.parse(json);
+                if (evt.type === "text-delta" && typeof evt.delta === "string") {
+                  fullText += evt.delta;
+                  streamedCodeRef.current?.append(evt.delta);
+                }
+                // Some streams may emit full message text at the end
+                if (evt.type === "message" && typeof evt.text === "string") {
+                  fullText += evt.text;
+                }
+              } catch {
+                // ignore partial frames
               }
-              if (evt.type === "message" && typeof evt.text === "string") {
-                fullText += evt.text;
-              }
-            } catch {
-              // ignore partial frames
             }
+          } else {
+            // Fallback: plain text streaming (no SSE)
+            fullText += buffer;
+            streamedCodeRef.current?.append(buffer);
+            buffer = "";
           }
         }
 
         const extracted = extractHtmlFromMessage(fullText);
-        if (extracted) setGameCode(extracted);
+        if (extracted) {
+          setGameCode(extracted);
+          try { localStorage.setItem("gameCodeHtml", extracted); } catch {}
+        }
       } catch (err) {
         console.error("Code generation error:", err);
       } finally {
         isGeneratingRef.current = false;
+        setIsGenerating(false);
       }
     },
-    [gameCode]
+    []
   );
 
   return (
     <SidebarProvider>
-      <GamePreview onAssistantTurnEnd={generateFromConversation} gameCode={gameCode} />
+      <GamePreview 
+        onAssistantTurnEnd={generateFromConversation} 
+        gameCode={gameCode}
+        isGenerating={isGenerating}
+        streamedCodeRef={streamedCodeRef}
+      />
     </SidebarProvider>
   );
 };

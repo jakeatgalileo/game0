@@ -26,7 +26,8 @@ export async function POST(req: Request) {
       },
     });
 
-    return result.toTextStreamResponse();
+    // Return AI SDK UI Message Stream (SSE) so the client can parse `data: { type, delta }` frames.
+    return result.toUIMessageStreamResponse();
   } catch (error) {
     console.log("ERROR: ", error);
     return new Response(

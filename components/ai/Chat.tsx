@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { cn } from "@/lib/utils";
 import { Conversation, ConversationContent, ConversationScrollButton } from "@/components/ai-elements/conversation";
 import { Message, MessageContent } from "@/components/ai-elements/message";
@@ -17,6 +17,20 @@ type ChatProps = {
 export function Chat({ className, onAssistantTurnEnd }: ChatProps) {
   const [input, setInput] = useState("");
   const { messages, sendMessage, status } = useChat();
+  const lastProcessedMessageId = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (!onAssistantTurnEnd || !messages.length) return;
+    
+    const lastMessage = messages[messages.length - 1];
+    if (lastMessage.role !== "assistant") return;
+    if (lastProcessedMessageId.current === lastMessage.id) return;
+    if (status === "streaming") return; // Still streaming, wait for completion
+    
+    // Assistant turn has completed
+    lastProcessedMessageId.current = lastMessage.id;
+    onAssistantTurnEnd({ messages });
+  }, [messages, status, onAssistantTurnEnd]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
