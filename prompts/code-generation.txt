@@ -12,7 +12,6 @@ Map from planner output:
 - Core Loop → main update sequence.
 - MVP Spec → mechanics, controls, basic UI/HUD, win/lose/scoring.
 - Variables (if present) → top-level CONSTANTS.
-- Assumptions (if present) → inline comments; keep behavior minimal.
 
 Code structure:
 1) <!DOCTYPE html>, <head> with title, reset CSS, canvas styles.
