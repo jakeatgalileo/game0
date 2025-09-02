@@ -23,6 +23,24 @@ const extractHtmlFromMessage = (content: string): string | null => {
   return null;
 };
 
+const wrapGameHtml = (html: string) =>
+  [
+    '<!DOCTYPE html>',
+    '<html>',
+    '<head>',
+    '<style>',
+    'html, body { height:100%; margin:0; }',
+    '#game-container { height:100%; max-height:100vh; overflow:hidden; }',
+    '</style>',
+    '</head>',
+    '<body>',
+    '<div id="game-container">',
+    html,
+    '</div>',
+    '</body>',
+    '</html>',
+  ].join('\n');
+
 const GamePreview = ({
   onAssistantTurnEnd,
   gameCode,
@@ -151,8 +169,9 @@ export const Assistant = () => {
 
         const extracted = extractHtmlFromMessage(fullText);
         if (extracted) {
-          setGameCode(extracted);
-          try { localStorage.setItem("gameCodeHtml", extracted); } catch {}
+          const wrapped = wrapGameHtml(extracted);
+          setGameCode(wrapped);
+          try { localStorage.setItem("gameCodeHtml", wrapped); } catch {}
         }
       } catch (err) {
         console.error("Code generation error:", err);

@@ -189,9 +189,30 @@ export const WebPreviewBody = ({
   useEffect(() => {
     const iframe = iframeRef.current;
     if (!iframe) return;
-    const observer = new ResizeObserver(applyScale);
-    observer.observe(iframe);
-    return () => observer.disconnect();
+    const resizeObserver = new ResizeObserver(applyScale);
+    resizeObserver.observe(iframe);
+
+    let bodyObserver: ResizeObserver | null = null;
+
+    const handleLoad = () => {
+      applyScale();
+      const body = iframe.contentDocument?.body;
+      if (!body) return;
+      bodyObserver?.disconnect();
+      bodyObserver = new ResizeObserver(applyScale);
+      bodyObserver.observe(body);
+    };
+
+    iframe.addEventListener('load', handleLoad);
+    if (iframe.contentDocument?.readyState === 'complete') {
+      handleLoad();
+    }
+
+    return () => {
+      resizeObserver.disconnect();
+      iframe.removeEventListener('load', handleLoad);
+      bodyObserver?.disconnect();
+    };
   }, []);
 
   return (
