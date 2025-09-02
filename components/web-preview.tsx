@@ -169,20 +169,25 @@ export const WebPreviewBody = ({
 
   const applyScale = () => {
     const iframe = iframeRef.current;
-    const body = iframe?.contentDocument?.body;
-    if (!iframe || !body) return;
+    const doc = iframe?.contentDocument || null;
+    const body = doc?.body || null;
+    if (!iframe || !doc || !body) return;
 
-    const { scrollWidth, scrollHeight } = body;
+    const root = (doc.querySelector('#game-container') as HTMLElement) || body;
+
+    const naturalWidth = root.scrollWidth || root.clientWidth || 1;
+    const naturalHeight = root.scrollHeight || root.clientHeight || 1;
     const { clientWidth, clientHeight } = iframe;
     const scale = Math.min(
-      clientWidth / scrollWidth,
-      clientHeight / scrollHeight
+      1, // never upscale for crisp rendering
+      clientWidth / naturalWidth,
+      clientHeight / naturalHeight
     );
 
-    body.style.transform = `scale(${scale})`;
-    body.style.transformOrigin = 'top left';
-    body.style.width = `${scrollWidth}px`;
-    body.style.height = `${scrollHeight}px`;
+    root.style.transform = `scale(${scale})`;
+    root.style.transformOrigin = 'top left';
+    root.style.width = `${naturalWidth}px`;
+    root.style.height = `${naturalHeight}px`;
     body.style.overflow = 'hidden';
   };
 
@@ -196,11 +201,13 @@ export const WebPreviewBody = ({
 
     const handleLoad = () => {
       applyScale();
-      const body = iframe.contentDocument?.body;
-      if (!body) return;
+      const doc = iframe.contentDocument;
+      const body = doc?.body;
+      if (!doc || !body) return;
+      const root = (doc.querySelector('#game-container') as HTMLElement) || body;
       bodyObserver?.disconnect();
       bodyObserver = new ResizeObserver(applyScale);
-      bodyObserver.observe(body);
+      bodyObserver.observe(root);
     };
 
     iframe.addEventListener('load', handleLoad);
