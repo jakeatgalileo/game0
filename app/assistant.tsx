@@ -95,13 +95,9 @@ export const Assistant = () => {
   const lastProcessedAssistantId = useRef<string | null>(null);
   const streamedCodeRef = useRef<StreamedCodeHandle | null>(null);
 
-  // Persist the last generated HTML locally so it survives refreshes during dev
-  // (In production, consider storing in a DB or object storage.)
+  // Disable persistence for now: ensure any previously saved HTML is removed.
   useEffect(() => {
-    try {
-      const saved = localStorage.getItem("gameCodeHtml");
-      if (saved) setGameCode(saved);
-    } catch {}
+    try { localStorage.removeItem("gameCodeHtml"); } catch {}
   }, []);
 
   const generateFromConversation = useCallback(
@@ -171,7 +167,6 @@ export const Assistant = () => {
         if (extracted) {
           const wrapped = wrapGameHtml(extracted);
           setGameCode(wrapped);
-          try { localStorage.setItem("gameCodeHtml", wrapped); } catch {}
         }
       } catch (err) {
         console.error("Code generation error:", err);
