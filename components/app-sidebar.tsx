@@ -8,7 +8,7 @@ export function AppSidebar({ onAssistantTurnEnd, ...props }: React.ComponentProp
 }) {
   return (
     <Sidebar collapsible="none" className="bg-background border-sidebar-border" {...props}>
-      <SidebarContent className="p-0 bg-background">
+      <SidebarContent className="p-0 bg-background overflow-hidden">
         <Chat onAssistantTurnEnd={onAssistantTurnEnd} className="py-4" />
       </SidebarContent>
       <SidebarRail />

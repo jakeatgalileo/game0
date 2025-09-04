@@ -41,10 +41,10 @@ export function Chat({ className, onAssistantTurnEnd }: ChatProps) {
   };
 
   return (
-    <div className={cn("bg-background text-foreground flex h-full flex-col", className)}>
-      <div className="mx-auto w-full max-w-[48rem] flex-1 px-4">
-        <Conversation>
-          <ConversationContent className="flex min-w-0 flex-1 flex-col gap-4">
+    <div className={cn("bg-background text-foreground grid h-full min-h-0 grid-rows-[1fr_auto]", className)}>
+      <div className="mx-auto w-full max-w-[48rem] min-h-0 px-4 overflow-hidden">
+        <Conversation className="h-full no-scrollbar">
+          <ConversationContent className="flex min-w-0 flex-col gap-4 pb-2">
             {messages.length === 0 && (
               <div className="text-muted-foreground">
                 <div className="text-lg font-medium mb-1">Start building your game</div>
