@@ -3,7 +3,7 @@ import { z } from 'zod';
 
 export const getGameMechanics = tool({
   description:
-    'Get detailed gameplay mechanics and core loop information for a specified game.',
+    'Return Flappy-like mechanics with hard invariants: (1) Start in idle hover mid-screen; wait for first input (Space/click/tap). (2) On first input, apply a small upward impulse and begin constant horizontal scroll; later inputs are flaps that counter gravity briefly. (3) Spawn paired vertical pipes with a small gap; randomize vertical offset; fixed horizontal spacing; +1 score per pipe pair passed. (4) Collision with any pipe or ground ends the run and surfaces restart. Populate only the typed fields.',
   inputSchema: z.object({
     gameName: z
       .string()
@@ -14,39 +14,35 @@ export const getGameMechanics = tool({
       return {
         game: 'Flappy Bird',
         summary:
-          'Tap to flap and navigate a bird through gaps between vertically aligned pipes. The game emphasizes rhythm, timing, and micro-adjustments to maintain altitude.',
+          'Idle bird hovers until first input; first flap starts scroll. Tap to flap against gravity and thread pipe gaps.',
         coreLoop: [
-          'Wait for the right moment',
-          'Tap to flap and gain altitude',
-          'Release to descend under gravity',
-          'Pass through pipe gaps to score',
-          'Repeat while difficulty ramps via tighter gaps/spacing',
+          'Idle hover waiting for first input',
+          'Tap/press to flap upward; release to fall',
+          'Maintain altitude to pass through pipe gaps',
+          'Score +1 per pipe pair passed; continue until collision',
         ],
         mechanics: [
-          '1-button input (tap/press) controls vertical velocity',
-          'Gravity pulls bird downward; flap adds an upward impulse',
-          'Horizontal auto-scroll creates constant forward motion',
-          'Collision with pipes or ground ends the run',
+          'Single-button flap adds upward impulse; gravity pulls down',
+          'World scrolls horizontally at constant speed after first input',
+          'Pipe pairs spawn at intervals with small randomized gap offset',
+          'Collision with pipe or ground ends the run; restart available',
         ],
-        scoring: 'Gain +1 per set of pipes cleared. The goal is a high score.',
+        scoring: '+1 per pipe pair passed; goal is highest score.',
         difficultyCurve:
-          'Consistent speed with tight gaps; tension comes from precision and lack of recovery time.',
-        references: [
-          'https://en.wikipedia.org/wiki/Flappy_Bird',
-        ],
+          'Constant speed with tight gaps; tension from precision and lack of recovery.',
+        references: [],
       } as const;
     }
     return {
       game: gameName,
-      summary:
-        'Game mechanics data not available for this title.',
+      summary: 'Game mechanics data not available for this title.',
     } as const;
   },
 });
 
 export const getGameVisualStyle = tool({
   description:
-    'Get visual design information including color palette, art style, and UI layout for a specified game.',
+    'Describe visuals. For Flappy-like: anchor to the latest reference screenshot in this conversation—glossy lime-green pipes with top-lip highlight, cyan/sky-blue sky with subtle clouds, looping ground stripe, small yellow bird with white belly, red beak, black outline, bold centered white score. If no screenshot is available, approximate this style. Output only the typed fields; no links.',
   inputSchema: z.object({
     gameName: z
       .string()
@@ -61,28 +57,27 @@ export const getGameVisualStyle = tool({
       return {
         game: 'Flappy Bird',
         palette: ['sky-blue', 'lime-green', 'gold', 'white', 'black'],
-        background: 'Parallax sky with subtle clouds; ground with repeating tile.',
+        background: 'Sky-blue with soft clouds; parallax feel; ground uses a repeating tile stripe.',
         sprites: {
           bird:
-            'Small, cartoony bird with 2–3 frame wing flaps; circular eye with high-contrast outline.',
+            'Small yellow bird, white belly, red beak, black outline; 2–3 frame wing flap.',
           pipes:
-            'Bright green cylindrical pipes with top lip highlight; paired top/bottom with a gap.',
+            'Glossy lime-green cylindrical pipes with darker rim and top-lip highlight; paired top/bottom with a tight gap.',
         },
         ui: {
-          score: 'Centered numeric score at the top in bold pixel or rounded font.',
-          start: 'Tap prompt overlay; fades on first input.',
+          score: 'Centered white numeric score at top in bold, high-contrast font.',
+          start: 'Subtle “Press Space / Tap to flap” text during idle.',
           gameOver:
             'Centered banner with score and best; restart prompt below.',
         },
         motion:
-          'Constant horizontal scroll; bird bobbing; pipe pairs spawn at intervals; subtle ground loop.',
+          'Constant horizontal scroll; bird bobbing idle; pipe pairs spawn at fixed intervals with vertical offset; looping ground.',
         styleHint: styleHint ?? null,
       } as const;
     }
     return {
       game: gameName,
-      note:
-        'Visual design data not available for this title.',
+      note: 'Visual design data not available for this title.',
       styleHint: styleHint ?? null,
     } as const;
   },
