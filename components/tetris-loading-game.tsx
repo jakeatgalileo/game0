@@ -68,17 +68,11 @@ interface Piece {
 
 type TetrisProps = {
   className?: string
-  size?: 'mini' | 'focus'
-  paused?: boolean
-  onPausedChange?: (paused: boolean) => void
   captureKeyboardWhenFocusedOnly?: boolean
 }
 
 export default function TetrisLoadingGame({
   className,
-  size = 'mini',
-  paused,
-  onPausedChange,
   captureKeyboardWhenFocusedOnly = true,
 }: TetrisProps) {
   const [board, setBoard] = useState<string[][]>(() =>
@@ -88,11 +82,11 @@ export default function TetrisLoadingGame({
   )
   const [currentPiece, setCurrentPiece] = useState<Piece | null>(null)
   const [gameOver, setGameOver] = useState(false)
-  const [isPaused, setIsPaused] = useState(false)
   const [isFocused, setIsFocused] = useState(false)
+  const [containerSize, setContainerSize] = useState({ width: 0, height: 0 })
+  const containerRef = useRef<HTMLDivElement>(null)
   const gameLoopRef = useRef<NodeJS.Timeout | null>(null)
   const lastDropTime = useRef<number>(Date.now())
-  const effectivePaused = paused ?? isPaused
 
   const generatePiece = useCallback((): Piece => {
     const pieceType = PIECES[Math.floor(Math.random() * PIECES.length)]
@@ -171,7 +165,7 @@ export default function TetrisLoadingGame({
 
   const movePiece = useCallback(
     (direction: "left" | "right" | "down" | "rotate" | "hardDrop") => {
-      if (!currentPiece || gameOver || effectivePaused) return
+      if (!currentPiece || gameOver) return
 
       if (direction === "hardDrop") {
         const dropPosition = { ...currentPiece.position }
@@ -224,17 +218,17 @@ export default function TetrisLoadingGame({
         }
       }
     },
-    [currentPiece, gameOver, effectivePaused, checkCollision, rotatePiece, placePiece, generatePiece],
+    [currentPiece, gameOver, checkCollision, rotatePiece, placePiece, generatePiece],
   )
 
   const dropPiece = useCallback(() => {
-    if (!gameOver && !effectivePaused && currentPiece) {
+    if (!gameOver && currentPiece) {
       movePiece("down")
     }
-  }, [gameOver, effectivePaused, currentPiece, movePiece])
+  }, [gameOver, currentPiece, movePiece])
 
   useEffect(() => {
-    if (gameOver || effectivePaused) {
+    if (gameOver) {
       if (gameLoopRef.current) {
         clearInterval(gameLoopRef.current)
         gameLoopRef.current = null
@@ -258,13 +252,54 @@ export default function TetrisLoadingGame({
         gameLoopRef.current = null
       }
     }
-  }, [gameOver, effectivePaused, dropPiece])
+  }, [gameOver, dropPiece])
 
   useEffect(() => {
     if (!currentPiece && !gameOver) {
       setCurrentPiece(generatePiece())
     }
   }, [currentPiece, gameOver, generatePiece])
+
+  useEffect(() => {
+    const updateSize = () => {
+      if (containerRef.current) {
+        const rect = containerRef.current.getBoundingClientRect()
+        setContainerSize({ width: rect.width, height: rect.height })
+      }
+    }
+
+    const resizeObserver = new ResizeObserver(updateSize)
+    if (containerRef.current) {
+      resizeObserver.observe(containerRef.current)
+    }
+
+    updateSize()
+
+    return () => {
+      resizeObserver.disconnect()
+    }
+  }, [])
+
+  const calculateCellSize = useCallback(() => {
+    if (!containerSize.width || !containerSize.height) return 14
+
+    const boardPadding = 16
+    const cellGap = 1
+    const controlsHeight = 28
+    const bottomMargin = 8
+    
+    const availableWidth = containerSize.width - boardPadding * 2 - cellGap * (BOARD_WIDTH - 1)
+    const availableHeight = containerSize.height - boardPadding * 2 - cellGap * (BOARD_HEIGHT - 1) - controlsHeight - bottomMargin
+    
+    const cellSizeByWidth = Math.floor(availableWidth / BOARD_WIDTH)
+    const cellSizeByHeight = Math.floor(availableHeight / BOARD_HEIGHT)
+    
+    const optimalSize = Math.min(cellSizeByWidth, cellSizeByHeight)
+    
+    return Math.max(8, Math.min(optimalSize, 24))
+  }, [containerSize])
+
+  const cellSize = calculateCellSize()
 
   const getGhostPosition = useCallback(
     (piece: Piece): Position => {
@@ -356,8 +391,6 @@ export default function TetrisLoadingGame({
             )
             setCurrentPiece(null)
             setGameOver(false)
-            setIsPaused(false)
-            onPausedChange?.(false)
             lastDropTime.current = Date.now()
           }
           break
@@ -366,12 +399,11 @@ export default function TetrisLoadingGame({
 
     window.addEventListener("keydown", handleKeyPress)
     return () => window.removeEventListener("keydown", handleKeyPress)
-  }, [movePiece, gameOver, isFocused, captureKeyboardWhenFocusedOnly, onPausedChange])
-
-  const cellPx = size === 'focus' ? 18 : 14
+  }, [movePiece, gameOver, isFocused, captureKeyboardWhenFocusedOnly])
 
   return (
     <div
+      ref={containerRef}
       className={`relative outline-none ${className ?? ""}`}
       tabIndex={0}
       onFocus={() => setIsFocused(true)}
@@ -379,12 +411,12 @@ export default function TetrisLoadingGame({
       onClick={(e) => { (e.currentTarget as HTMLDivElement).focus() }}
       style={{
         // @ts-expect-error CSS var helper
-        "--cell-size": `${cellPx}px`,
+        "--cell-size": `${cellSize}px`,
       }}
     >
-      <div className="relative mx-auto">
+      <div className="relative mx-auto flex flex-col items-center justify-center h-full">
         <div
-          className="grid gap-[1px] p-2 bg-border rounded-[6px] shadow-lg"
+          className="grid gap-[1px] p-2 bg-border rounded-[6px] shadow-lg flex-shrink-0"
           style={{
             gridTemplateColumns: `repeat(${BOARD_WIDTH}, var(--cell-size))`,
             gridAutoRows: 'var(--cell-size)'
@@ -403,14 +435,6 @@ export default function TetrisLoadingGame({
           )}
         </div>
 
-        {effectivePaused && !gameOver && (
-          <div className="absolute inset-0 bg-background/90 flex items-center justify-center rounded-[6px]">
-            <div className="text-center">
-              <p className="font-sans text-lg font-semibold text-foreground mb-2">Paused</p>
-              <p className="text-sm text-muted-foreground">Press Space to continue</p>
-            </div>
-          </div>
-        )}
 
         {gameOver && (
           <div className="absolute inset-0 bg-background/90 flex items-center justify-center rounded-[6px]">
@@ -425,8 +449,6 @@ export default function TetrisLoadingGame({
                   )
                   setCurrentPiece(null)
                   setGameOver(false)
-                  setIsPaused(false)
-                  onPausedChange?.(false)
                   lastDropTime.current = Date.now()
                 }}
                 className="px-4 py-2 bg-primary text-primary-foreground rounded-[6px] font-sans text-sm hover:bg-primary/90 transition-colors"
@@ -436,10 +458,10 @@ export default function TetrisLoadingGame({
             </div>
           </div>
         )}
-      </div>
 
-      <div className="mt-2 text-center text-[11px] text-muted-foreground select-none">
-        Arrow keys to move • Spacebar to drop
+        <div className="mt-2 text-center text-[11px] text-muted-foreground select-none flex-shrink-0">
+          Arrow keys to move • Spacebar to drop
+        </div>
       </div>
     </div>
   )
