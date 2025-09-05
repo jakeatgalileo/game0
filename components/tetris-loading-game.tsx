@@ -378,7 +378,7 @@ export default function TetrisLoadingGame({
       onBlur={() => setIsFocused(false)}
       onClick={(e) => { (e.currentTarget as HTMLDivElement).focus() }}
       style={{
-        // @ts-ignore CSS var helper
+        // @ts-expect-error CSS var helper
         "--cell-size": `${cellPx}px`,
       }}
     >

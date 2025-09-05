@@ -11,7 +11,7 @@ import {
   WebPreviewConsole,
 } from "@/components/web-preview";
 import { UIMessage } from "@ai-sdk/react";
-import StreamedCode, { StreamedCodeHandle } from "@/components/StreamedCode";
+import type { StreamedCodeHandle } from "@/components/StreamedCode";
 import LoadingScreen from "@/components/loading-screen";
 
 const extractHtmlFromMessage = (content: string): string | null => {
@@ -63,30 +63,11 @@ const GamePreview = ({
   startedAt: number;
   onCancel: () => void;
 }) => {
-  const [showLoading, setShowLoading] = useState(false);
-  const [fadeOut, setFadeOut] = useState(false);
-
-  useEffect(() => {
-    if (isGenerating) {
-      setShowLoading(true);
-      setFadeOut(false);
-    } else {
-      if (gameCode) {
-        setFadeOut(true);
-        const t = setTimeout(() => setShowLoading(false), 350);
-        return () => clearTimeout(t);
-      } else {
-        setShowLoading(false);
-        setFadeOut(false);
-      }
-    }
-  }, [isGenerating, gameCode]);
-
   return (
     <div className="flex h-dvh w-full pr-0.5">
       <AppSidebar onAssistantTurnEnd={onAssistantTurnEnd} />
       <SidebarInset className="bg-background">
-        <div className="flex-1 overflow-hidden pl-2 pr-4 py-4 bg-background">
+        <div className="flex h-full flex-1 overflow-hidden pl-2 pr-4 py-4 bg-background">
           <WebPreview>
             <WebPreviewNavigation>
               <WebPreviewUrl disabled value={gameCode ? "Generated Game" : "Ready for your game..."} />
@@ -94,26 +75,23 @@ const GamePreview = ({
             <span className="sr-only" role="status" aria-live="polite">
               {isGenerating ? "Generating game…" : gameCode ? "Game ready" : "Idle"}
             </span>
-            <div className="relative flex-1 min-h-[50vh]">
-              {gameCode ? (
+            <div className="flex h-full flex-1 min-h-[50vh]">
+              {isGenerating ? (
+                <LoadingScreen
+                  codeRef={streamedCodeRef}
+                  bytes={bytes}
+                  lines={lines}
+                  startedAt={startedAt}
+                  onCancel={onCancel}
+                />
+              ) : gameCode ? (
                 <WebPreviewBody src={`data:text/html;charset=utf-8,${encodeURIComponent(gameCode)}`} />
               ) : (
-                <div className="flex-1 bg-background flex items-center justify-center rounded-b-lg">
+                <div className="flex flex-1 items-center justify-center rounded-b-lg bg-background">
                   <div className="text-center space-y-4 text-muted-foreground">
                     <div className="text-4xl opacity-30">🎮</div>
                     <p className="text-lg">Your game will appear here</p>
                   </div>
-                </div>
-              )}
-              {showLoading && (
-                <div className={`absolute inset-0 transition-opacity duration-300 ${fadeOut ? 'opacity-0 pointer-events-none' : 'opacity-100'}`} aria-busy={!fadeOut}>
-                  <LoadingScreen
-                    codeRef={streamedCodeRef}
-                    bytes={bytes}
-                    lines={lines}
-                    startedAt={startedAt}
-                    onCancel={onCancel}
-                  />
                 </div>
               )}
             </div>
@@ -231,13 +209,13 @@ export const Assistant = () => {
           const wrapped = wrapGameHtml(extracted);
           setGameCode(wrapped);
         }
-      } catch (err) {
-        if ((err as any)?.name === 'AbortError') {
-          // cancelled
-        } else {
-          console.error("Code generation error:", err);
-        }
-      } finally {
+        } catch (err) {
+          if (err instanceof Error && err.name === "AbortError") {
+            // cancelled
+          } else {
+            console.error("Code generation error:", err);
+          }
+        } finally {
         isGeneratingRef.current = false;
         setIsGenerating(false);
         abortRef.current = null;
