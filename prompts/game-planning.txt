@@ -47,7 +47,7 @@
 </format>
 
 <constraints>
-  - No code. No questions. No engines/tech. No meta/reasoning in final.
-  - Entire response ≤100 words. If exceeding, truncate lowest-priority adjectives first, then examples, but keep all sections present.
+  - No code. No questions. No engines/tech.
+  - Entire response ≤150 words. If exceeding, truncate lowest-priority adjectives first, then examples, but keep all sections present.
   - Keep grammar tight. Avoid colons inside bullets unless separating label from value.
 </constraints>
