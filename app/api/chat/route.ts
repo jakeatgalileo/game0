@@ -17,7 +17,7 @@ export async function POST(req: Request) {
       system: systemPrompt,
       messages: convertToModelMessages(messages),
       tools: gameDescriptionsTools,
-      stopWhen: stepCountIs(3),
+      stopWhen: stepCountIs(5),
       providerOptions: {
         openai: {
           reasoningSummary: 'auto',
