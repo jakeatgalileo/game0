@@ -38,26 +38,29 @@ export default function LoadingScreen({ codeRef, bytes, lines, startedAt }: Load
   return (
     <div className="flex h-full w-full flex-col p-4" aria-busy="true">
       {/* Header */}
-      <div className="flex items-center justify-between gap-2 pb-3">
-        <div className="flex items-center gap-2">
-          <div className="size-2 rounded-full bg-primary animate-pulse" aria-hidden />
-          <div className="text-sm font-medium">Generating Game HTML…</div>
-          <span className="sr-only" role="status" aria-live="polite">
-            Streaming game HTML. {formatBytes(bytes)} received, {lines} lines.
-          </span>
-        </div>
-        <div className="flex items-center gap-3 text-xs text-muted-foreground">
-          <div><span className="text-foreground font-medium">{formatBytes(bytes)}</span> streamed</div>
-          <div><span className="text-foreground font-medium">{lines}</span> lines</div>
-          <div><span className="text-foreground font-medium">{formatElapsed(elapsed)}</span> elapsed</div>
-        </div>
+      <div className="flex items-center gap-2 pb-3">
+        <div className="size-2 rounded-full bg-primary animate-pulse" aria-hidden />
+        <div className="text-sm font-medium">Generating Game HTML…</div>
+        <span className="sr-only" role="status" aria-live="polite">
+          Streaming game HTML. {formatBytes(bytes)} received, {lines} lines.
+        </span>
       </div>
 
       {/* Content */}
       <div className="grid min-h-0 flex-1 grid-cols-2 gap-4">
         {/* Stream panel */}
         <div className="min-h-0 overflow-hidden rounded-lg border bg-card">
-          <div className="border-b px-3 py-2 text-xs text-muted-foreground">HTML Stream</div>
+          <div className="flex items-center justify-between border-b px-3 py-2 text-xs text-muted-foreground">
+            <div className="flex items-center gap-2">
+              <div className="size-2 rounded-full bg-primary animate-pulse" aria-hidden />
+              <div className="font-medium">HTML Stream</div>
+            </div>
+            <div className="flex items-center gap-3 text-muted-foreground">
+              <div><span className="text-foreground font-medium">{formatBytes(bytes)}</span> streamed</div>
+              <div><span className="text-foreground font-medium">{lines}</span> lines</div>
+              <div><span className="text-foreground font-medium">{formatElapsed(elapsed)}</span> elapsed</div>
+            </div>
+          </div>
           <div className="min-h-0 h-full max-h-full">
             <StreamedCode ref={codeRef} title="Generating Game Code..." language="markup" className="h-full w-full" />
           </div>
