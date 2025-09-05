@@ -66,7 +66,21 @@ interface Piece {
   position: Position
 }
 
-export default function TetrisLoadingGame() {
+type TetrisProps = {
+  className?: string
+  size?: 'mini' | 'focus'
+  paused?: boolean
+  onPausedChange?: (paused: boolean) => void
+  captureKeyboardWhenFocusedOnly?: boolean
+}
+
+export default function TetrisLoadingGame({
+  className,
+  size = 'mini',
+  paused,
+  onPausedChange,
+  captureKeyboardWhenFocusedOnly = true,
+}: TetrisProps) {
   const [board, setBoard] = useState<string[][]>(() =>
     Array(BOARD_HEIGHT)
       .fill(null)
@@ -75,8 +89,10 @@ export default function TetrisLoadingGame() {
   const [currentPiece, setCurrentPiece] = useState<Piece | null>(null)
   const [gameOver, setGameOver] = useState(false)
   const [isPaused, setIsPaused] = useState(false)
+  const [isFocused, setIsFocused] = useState(false)
   const gameLoopRef = useRef<NodeJS.Timeout | null>(null)
   const lastDropTime = useRef<number>(Date.now())
+  const effectivePaused = paused ?? isPaused
 
   const generatePiece = useCallback((): Piece => {
     const pieceType = PIECES[Math.floor(Math.random() * PIECES.length)]
@@ -153,15 +169,9 @@ export default function TetrisLoadingGame() {
     [board],
   )
 
-  const dropPiece = useCallback(() => {
-    if (!gameOver && !isPaused && currentPiece) {
-      movePiece("down")
-    }
-  }, [gameOver, isPaused, currentPiece])
-
   const movePiece = useCallback(
     (direction: "left" | "right" | "down" | "rotate" | "hardDrop") => {
-      if (!currentPiece || gameOver || isPaused) return
+      if (!currentPiece || gameOver || effectivePaused) return
 
       if (direction === "hardDrop") {
         const dropPosition = { ...currentPiece.position }
@@ -214,11 +224,17 @@ export default function TetrisLoadingGame() {
         }
       }
     },
-    [currentPiece, gameOver, isPaused, checkCollision, rotatePiece, placePiece, generatePiece],
+    [currentPiece, gameOver, effectivePaused, checkCollision, rotatePiece, placePiece, generatePiece],
   )
 
+  const dropPiece = useCallback(() => {
+    if (!gameOver && !effectivePaused && currentPiece) {
+      movePiece("down")
+    }
+  }, [gameOver, effectivePaused, currentPiece, movePiece])
+
   useEffect(() => {
-    if (gameOver || isPaused) {
+    if (gameOver || effectivePaused) {
       if (gameLoopRef.current) {
         clearInterval(gameLoopRef.current)
         gameLoopRef.current = null
@@ -242,7 +258,7 @@ export default function TetrisLoadingGame() {
         gameLoopRef.current = null
       }
     }
-  }, [gameOver, isPaused, dropPiece])
+  }, [gameOver, effectivePaused, dropPiece])
 
   useEffect(() => {
     if (!currentPiece && !gameOver) {
@@ -302,6 +318,9 @@ export default function TetrisLoadingGame() {
   }
 
   useEffect(() => {
+    const shouldCapture = captureKeyboardWhenFocusedOnly ? isFocused : true
+    if (!shouldCapture) return
+
     const handleKeyPress = (event: KeyboardEvent) => {
       if (gameOver) return
 
@@ -338,6 +357,7 @@ export default function TetrisLoadingGame() {
             setCurrentPiece(null)
             setGameOver(false)
             setIsPaused(false)
+            onPausedChange?.(false)
             lastDropTime.current = Date.now()
           }
           break
@@ -346,71 +366,80 @@ export default function TetrisLoadingGame() {
 
     window.addEventListener("keydown", handleKeyPress)
     return () => window.removeEventListener("keydown", handleKeyPress)
-  }, [movePiece, gameOver])
+  }, [movePiece, gameOver, isFocused, captureKeyboardWhenFocusedOnly, onPausedChange])
+
+  const cellPx = size === 'focus' ? 18 : 14
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-background p-4">
-      <div className="flex flex-col items-center gap-4">
-        <div className="text-center">
-          <h1 className="font-sans text-2xl font-semibold text-foreground mb-2">Your game is loading</h1>
-          <p className="font-sans text-sm text-muted-foreground">Play Tetris while you wait</p>
-          {isPaused && <span className="text-sm text-yellow-500 font-medium">PAUSED</span>}
+    <div
+      className={`relative outline-none ${className ?? ""}`}
+      tabIndex={0}
+      onFocus={() => setIsFocused(true)}
+      onBlur={() => setIsFocused(false)}
+      onClick={(e) => { (e.currentTarget as HTMLDivElement).focus() }}
+      style={{
+        // @ts-ignore CSS var helper
+        "--cell-size": `${cellPx}px`,
+      }}
+    >
+      <div className="relative mx-auto">
+        <div
+          className="grid gap-[1px] p-2 bg-border rounded-[6px] shadow-lg"
+          style={{
+            gridTemplateColumns: `repeat(${BOARD_WIDTH}, var(--cell-size))`,
+            gridAutoRows: 'var(--cell-size)'
+          } as React.CSSProperties}
+        >
+          {renderBoard().map((row, y) =>
+            row.map((cell, x) => (
+              <div
+                key={`${y}-${x}`}
+                style={{ width: 'var(--cell-size)', height: 'var(--cell-size)' }}
+                className={`rounded-[2px] border border-border/20 transition-colors ${
+                  cell === "ghost" ? "bg-muted-foreground/20 border-muted-foreground/30" : cell || "bg-background/50"
+                }`}
+              />
+            )),
+          )}
         </div>
 
-        <div className="relative">
-          <div
-            className="grid gap-[1px] p-2 bg-border rounded-[6px] shadow-lg"
-            style={{ gridTemplateColumns: `repeat(${BOARD_WIDTH}, 1fr)` }}
-          >
-            {renderBoard().map((row, y) =>
-              row.map((cell, x) => (
-                <div
-                  key={`${y}-${x}`}
-                  className={`w-4 h-4 rounded-[2px] border border-border/20 transition-colors ${
-                    cell === "ghost" ? "bg-muted-foreground/20 border-muted-foreground/30" : cell || "bg-background/50"
-                  }`}
-                />
-              )),
-            )}
+        {effectivePaused && !gameOver && (
+          <div className="absolute inset-0 bg-background/90 flex items-center justify-center rounded-[6px]">
+            <div className="text-center">
+              <p className="font-sans text-lg font-semibold text-foreground mb-2">Paused</p>
+              <p className="text-sm text-muted-foreground">Press Space to continue</p>
+            </div>
           </div>
+        )}
 
-          {isPaused && !gameOver && (
-            <div className="absolute inset-0 bg-background/90 flex items-center justify-center rounded-[6px]">
-              <div className="text-center">
-                <p className="font-sans text-lg font-semibold text-foreground mb-2">Paused</p>
-                <p className="text-sm text-muted-foreground">Press Space to continue</p>
-              </div>
+        {gameOver && (
+          <div className="absolute inset-0 bg-background/90 flex items-center justify-center rounded-[6px]">
+            <div className="text-center">
+              <p className="font-sans text-lg font-semibold text-foreground mb-1">Game Over</p>
+              <button
+                onClick={() => {
+                  setBoard(
+                    Array(BOARD_HEIGHT)
+                      .fill(null)
+                      .map(() => Array(BOARD_WIDTH).fill("")),
+                  )
+                  setCurrentPiece(null)
+                  setGameOver(false)
+                  setIsPaused(false)
+                  onPausedChange?.(false)
+                  lastDropTime.current = Date.now()
+                }}
+                className="px-4 py-2 bg-primary text-primary-foreground rounded-[6px] font-sans text-sm hover:bg-primary/90 transition-colors"
+              >
+                Play Again
+              </button>
             </div>
-          )}
+          </div>
+        )}
+      </div>
 
-          {gameOver && (
-            <div className="absolute inset-0 bg-background/90 flex items-center justify-center rounded-[6px]">
-              <div className="text-center">
-                <p className="font-sans text-lg font-semibold text-foreground mb-1">Game Over</p>
-                <button
-                  onClick={() => {
-                    setBoard(
-                      Array(BOARD_HEIGHT)
-                        .fill(null)
-                        .map(() => Array(BOARD_WIDTH).fill("")),
-                    )
-                    setCurrentPiece(null)
-                    setGameOver(false)
-                    setIsPaused(false)
-                    lastDropTime.current = Date.now()
-                  }}
-                  className="px-4 py-2 bg-primary text-primary-foreground rounded-[6px] font-sans text-sm hover:bg-primary/90 transition-colors"
-                >
-                  Play Again
-                </button>
-              </div>
-            </div>
-          )}
-        </div>
-
-        <div className="text-center text-xs text-muted-foreground max-w-xs">
-          <p>Arrow keys to move • Spacebar to drop</p>
-        </div>
+      <div className="mt-2 text-center text-[11px] text-muted-foreground select-none">
+        Arrow keys to move • Spacebar to drop
       </div>
     </div>
   )

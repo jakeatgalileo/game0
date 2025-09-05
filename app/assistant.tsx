@@ -12,6 +12,7 @@ import {
 } from "@/components/web-preview";
 import { UIMessage } from "@ai-sdk/react";
 import StreamedCode, { StreamedCodeHandle } from "@/components/StreamedCode";
+import LoadingScreen from "@/components/loading-screen";
 
 const extractHtmlFromMessage = (content: string): string | null => {
   // Be lenient: allow optional newline before closing backticks and CRLFs
@@ -48,12 +49,39 @@ const GamePreview = ({
   gameCode,
   isGenerating,
   streamedCodeRef,
+  bytes,
+  lines,
+  startedAt,
+  onCancel,
 }: {
   onAssistantTurnEnd?: (args: { messages: UIMessage[] }) => void;
   gameCode: string;
   isGenerating: boolean;
   streamedCodeRef: React.RefObject<StreamedCodeHandle | null>;
+  bytes: number;
+  lines: number;
+  startedAt: number;
+  onCancel: () => void;
 }) => {
+  const [showLoading, setShowLoading] = useState(false);
+  const [fadeOut, setFadeOut] = useState(false);
+
+  useEffect(() => {
+    if (isGenerating) {
+      setShowLoading(true);
+      setFadeOut(false);
+    } else {
+      if (gameCode) {
+        setFadeOut(true);
+        const t = setTimeout(() => setShowLoading(false), 350);
+        return () => clearTimeout(t);
+      } else {
+        setShowLoading(false);
+        setFadeOut(false);
+      }
+    }
+  }, [isGenerating, gameCode]);
+
   return (
     <div className="flex h-dvh w-full pr-0.5">
       <AppSidebar onAssistantTurnEnd={onAssistantTurnEnd} />
@@ -63,25 +91,32 @@ const GamePreview = ({
             <WebPreviewNavigation>
               <WebPreviewUrl disabled value={gameCode ? "Generated Game" : "Ready for your game..."} />
             </WebPreviewNavigation>
-            {isGenerating ? (
-              <div className="flex-1 bg-background p-6 overflow-hidden flex items-center justify-center">
-                <StreamedCode
-                  ref={streamedCodeRef}
-                  title="Generating Game Code..."
-                  language="markup"
-                  className="h-[60%] w-[65%]"
-                />
-              </div>
-            ) : gameCode ? (
-              <WebPreviewBody src={`data:text/html;charset=utf-8,${encodeURIComponent(gameCode)}`} />
-            ) : (
-              <div className="flex-1 bg-background flex items-center justify-center rounded-b-lg">
-                <div className="text-center space-y-4 text-muted-foreground">
-                  <div className="text-4xl opacity-30">🎮</div>
-                  <p className="text-lg">Your game will appear here</p>
+            <span className="sr-only" role="status" aria-live="polite">
+              {isGenerating ? "Generating game…" : gameCode ? "Game ready" : "Idle"}
+            </span>
+            <div className="relative flex-1 min-h-[50vh]">
+              {gameCode ? (
+                <WebPreviewBody src={`data:text/html;charset=utf-8,${encodeURIComponent(gameCode)}`} />
+              ) : (
+                <div className="flex-1 bg-background flex items-center justify-center rounded-b-lg">
+                  <div className="text-center space-y-4 text-muted-foreground">
+                    <div className="text-4xl opacity-30">🎮</div>
+                    <p className="text-lg">Your game will appear here</p>
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
+              {showLoading && (
+                <div className={`absolute inset-0 transition-opacity duration-300 ${fadeOut ? 'opacity-0 pointer-events-none' : 'opacity-100'}`} aria-busy={!fadeOut}>
+                  <LoadingScreen
+                    codeRef={streamedCodeRef}
+                    bytes={bytes}
+                    lines={lines}
+                    startedAt={startedAt}
+                    onCancel={onCancel}
+                  />
+                </div>
+              )}
+            </div>
             <WebPreviewConsole />
           </WebPreview>
         </div>
@@ -96,6 +131,10 @@ export const Assistant = () => {
   const isGeneratingRef = useRef(false);
   const lastProcessedAssistantId = useRef<string | null>(null);
   const streamedCodeRef = useRef<StreamedCodeHandle | null>(null);
+  const abortRef = useRef<AbortController | null>(null);
+  const [bytes, setBytes] = useState(0);
+  const [lines, setLines] = useState(0);
+  const [startedAt, setStartedAt] = useState<number>(() => Date.now());
 
   // Disable persistence for now: ensure any previously saved HTML is removed.
   useEffect(() => {
@@ -112,16 +151,22 @@ export const Assistant = () => {
       lastProcessedAssistantId.current = last.id;
       isGeneratingRef.current = true;
       setIsGenerating(true);
+      setBytes(0);
+      setLines(0);
+      setStartedAt(Date.now());
       streamedCodeRef.current?.clear();
       try {
         const sanitized = payload.messages.map((m) => ({
           ...m,
           parts: m.parts?.filter((p) => p.type === "text"),
         }));
+        const controller = new AbortController();
+        abortRef.current = controller;
         const response = await fetch("/api/generate-code", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ messages: sanitized }),
+          signal: controller.signal,
         });
         if (!response.ok || !response.body) throw new Error(`HTTP ${response.status}`);
 
@@ -148,6 +193,14 @@ export const Assistant = () => {
                 if (evt.type === "text-delta" && typeof evt.delta === "string") {
                   fullText += evt.delta;
                   streamedCodeRef.current?.append(evt.delta);
+                  try {
+                    const b = new TextEncoder().encode(evt.delta).length;
+                    setBytes((x) => x + b);
+                  } catch {
+                    setBytes((x) => x + evt.delta.length);
+                  }
+                  const nl = (evt.delta.match(/\n/g) || []).length;
+                  if (nl) setLines((x) => x + nl);
                 }
                 // Some streams may emit full message text at the end
                 if (evt.type === "message" && typeof evt.text === "string") {
@@ -161,6 +214,14 @@ export const Assistant = () => {
             // Fallback: plain text streaming (no SSE)
             fullText += buffer;
             streamedCodeRef.current?.append(buffer);
+            try {
+              const b = new TextEncoder().encode(buffer).length;
+              setBytes((x) => x + b);
+            } catch {
+              setBytes((x) => x + buffer.length);
+            }
+            const nl = (buffer.match(/\n/g) || []).length;
+            if (nl) setLines((x) => x + nl);
             buffer = "";
           }
         }
@@ -171,10 +232,15 @@ export const Assistant = () => {
           setGameCode(wrapped);
         }
       } catch (err) {
-        console.error("Code generation error:", err);
+        if ((err as any)?.name === 'AbortError') {
+          // cancelled
+        } else {
+          console.error("Code generation error:", err);
+        }
       } finally {
         isGeneratingRef.current = false;
         setIsGenerating(false);
+        abortRef.current = null;
       }
     },
     []
@@ -187,6 +253,10 @@ export const Assistant = () => {
         gameCode={gameCode}
         isGenerating={isGenerating}
         streamedCodeRef={streamedCodeRef}
+        bytes={bytes}
+        lines={lines}
+        startedAt={startedAt}
+        onCancel={() => abortRef.current?.abort()}
       />
     </SidebarProvider>
   );
