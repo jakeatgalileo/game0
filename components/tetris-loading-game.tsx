@@ -53,7 +53,7 @@ const PIECES = [
 ]
 
 const BOARD_WIDTH = 10
-const BOARD_HEIGHT = 20
+const BOARD_HEIGHT = 24
 
 interface Position {
   x: number
