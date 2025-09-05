@@ -1,21 +1,13 @@
 import { tool } from 'ai';
 import { z } from 'zod';
 
-/* 
-Ideally, we have a bank of existing games or jdo a web-search for existing games.
-
-TODO: need a game asset library.
-*/
-
-// Tool: Get a deeper, gameplay-focused description of a game.
-// For now this is stubbed with hard-coded data for Flappy Bird.
-export const getGameDescription = tool({
+export const getGameMechanics = tool({
   description:
-    'Get an extended description of a known game, including core loop and mechanics.',
+    'Get detailed gameplay mechanics and core loop information for a specified game.',
   inputSchema: z.object({
     gameName: z
       .string()
-      .describe('Name of the game to describe, e.g. "Flappy Bird"'),
+      .describe('Name of the game to analyze for mechanics and gameplay'),
   }),
   async execute({ gameName }) {
     if (/flappy\s*bird/i.test(gameName)) {
@@ -44,24 +36,21 @@ export const getGameDescription = tool({
         ],
       } as const;
     }
-    // Stub fallback for non-Flappy Bird requests
     return {
       game: gameName,
       summary:
-        'No details available in this stub. Only "Flappy Bird" is supported for now.',
+        'Game mechanics data not available for this title.',
     } as const;
   },
 });
 
-// Tool: Describe the visual style, palette, and UI elements of a game.
-// For now this is stubbed with hard-coded data for Flappy Bird.
-export const getGameVisuals = tool({
+export const getGameVisualStyle = tool({
   description:
-    'Describe the visual presentation of a game: palette, sprites, background, and screen layout.',
+    'Get visual design information including color palette, art style, and UI layout for a specified game.',
   inputSchema: z.object({
     gameName: z
       .string()
-      .describe('Name of the game, e.g. "Flappy Bird"'),
+      .describe('Name of the game to analyze for visual design'),
     styleHint: z
       .string()
       .optional()
@@ -90,11 +79,10 @@ export const getGameVisuals = tool({
         styleHint: styleHint ?? null,
       } as const;
     }
-    // Stub fallback for non-Flappy Bird requests
     return {
       game: gameName,
       note:
-        'No visual details available in this stub. Only "Flappy Bird" is supported for now.',
+        'Visual design data not available for this title.',
       styleHint: styleHint ?? null,
     } as const;
   },
@@ -102,6 +90,6 @@ export const getGameVisuals = tool({
 
 // Export as a tool set for easy inclusion in generateText/streamText calls.
 export const gameDescriptionsTools = {
-  getGameDescription,
-  getGameVisuals,
+  getGameMechanics,
+  getGameVisualStyle,
 };

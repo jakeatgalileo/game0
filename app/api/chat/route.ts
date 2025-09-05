@@ -1,5 +1,6 @@
-import { streamText, convertToModelMessages, UIMessage } from "ai";
+import { streamText, convertToModelMessages, UIMessage, stepCountIs } from "ai";
 import { loadPromptWithHotReload } from "@/lib/prompts";
+import { gameDescriptionsTools } from '@/app/tools/game-descriptions';
 import 'dotenv/config';
 
 // Allow streaming responses up to 30 seconds
@@ -11,25 +12,12 @@ export async function POST(req: Request) {
     
     const systemPrompt = await loadPromptWithHotReload("game-planning")
 
-    // To enable tool calling for game descriptions, import the tool set
-    // from '@/app/tools/game-descriptions' and pass it to `tools`.
-    // Example (not enabled yet):
-    // import { gameDescriptionsTools } from '@/app/tools/game-descriptions';
-    // const result = streamText({
-    //   model: 'openai/gpt-5-mini-2025-08-07',
-    //   system: systemPrompt,
-    //   messages: convertToModelMessages(messages),
-    //   tools: gameDescriptionsTools,
-    //   // Optionally: toolChoice or multi-step stopWhen
-    //   // toolChoice: { type: 'tool', toolName: 'getGameDescription' },
-    //   // stopWhen: stepCountIs(5),
-    //   // providerOptions: { ... }
-    // });
-
     const result = streamText({
       model: "openai/gpt-5-mini-2025-08-07",
       system: systemPrompt,
       messages: convertToModelMessages(messages),
+      tools: gameDescriptionsTools,
+      stopWhen: stepCountIs(3),
       providerOptions: {
         openai: {
           reasoningSummary: 'auto',

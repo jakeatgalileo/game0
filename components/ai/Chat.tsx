@@ -7,7 +7,9 @@ import { Message, MessageContent } from "@/components/ai-elements/message";
 import { Response } from "@/components/ai-elements/response";
 import { Reasoning, ReasoningContent, ReasoningTrigger } from "@/components/ai-elements/reasoning";
 import { PromptInput, PromptInputTextarea, PromptInputToolbar, PromptInputSubmit } from "@/components/ai-elements/prompt-input";
+import { Tool, ToolContent, ToolHeader, ToolInput, ToolOutput } from "@/components/ai-elements/tool";
 import { UIMessage, useChat } from "@ai-sdk/react";
+import { GameToolUIPart } from "@/types/game-tools";
 
 type ChatProps = {
   className?: string;
@@ -82,6 +84,32 @@ export function Chat({ className, onAssistantTurnEnd }: ChatProps) {
                           </Reasoning>
                         );
                       default:
+                        // Handle tool parts
+                        if (part.type.startsWith('tool-')) {
+                          const toolPart = part as GameToolUIPart;
+                          const shouldAutoOpen = toolPart.state === 'output-available' || toolPart.state === 'output-error';
+                          
+                          return (
+                            <Tool key={`${message.id}-${i}`} defaultOpen={shouldAutoOpen}>
+                              <ToolHeader type={toolPart.type} state={toolPart.state} />
+                              <ToolContent>
+                                <ToolInput input={toolPart.input} />
+                                {(toolPart.state === 'output-available' || toolPart.state === 'output-error') && (
+                                  <ToolOutput
+                                    output={
+                                      toolPart.output && (
+                                        <Response>
+                                          {JSON.stringify(toolPart.output, null, 2)}
+                                        </Response>
+                                      )
+                                    }
+                                    errorText={toolPart.errorText}
+                                  />
+                                )}
+                              </ToolContent>
+                            </Tool>
+                          );
+                        }
                         return null;
                     }
                   })}
