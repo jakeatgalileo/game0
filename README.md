@@ -44,3 +44,4 @@ You can modify the system prompts in the `prompts/` directory to customize the A
 # TODO + Improvements
 
 1. Either websearch for references to existing games and pull in those resources during runtimes or build an asset library to reference from.
+2. Some things like the tools are hard-coded so need to implement a mechanism to get game design + UI elements. Maybe separate LLM calls?
