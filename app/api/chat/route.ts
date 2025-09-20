@@ -1,19 +1,75 @@
-import { streamText, convertToModelMessages, UIMessage, stepCountIs } from "ai";
-import { loadPromptWithHotReload } from "@/lib/prompts";
+import { after } from 'next/server';
+import { streamText, convertToModelMessages, type UIMessage, stepCountIs } from 'ai';
+import { observe, updateActiveObservation, updateActiveTrace } from '@langfuse/tracing';
+import { trace } from '@opentelemetry/api';
+
+import { loadPromptWithHotReload } from '@/lib/prompts';
+import { tryGetLangfuseClient } from '@/lib/langfuse';
+import { langfuseSpanProcessor } from '@/instrumentation';
 import { gameDescriptionsTools } from '@/app/tools/game-descriptions';
 import 'dotenv/config';
 
-// Allow streaming responses up to 30 seconds
+export const runtime = 'nodejs';
 export const maxDuration = 30;
 
-export async function POST(req: Request) {
+const PROMPT_SLUG = 'game-planning';
+
+const handler = async (req: Request) => {
   try {
-    const { messages }: { messages: UIMessage[] } = await req.json();
-    
-    const systemPrompt = await loadPromptWithHotReload("game-planning")
+    const body = await req.json();
+    const messages: UIMessage[] = Array.isArray(body?.messages) ? body.messages : [];
+    const chatId: string | undefined = body?.chatId ?? body?.sessionId ?? undefined;
+    const userId: string | undefined = body?.userId ?? undefined;
+
+    if (messages.length === 0) {
+      return new Response(
+        JSON.stringify({ error: 'messages array is required' }),
+        {
+          status: 400,
+          headers: { 'Content-Type': 'application/json' },
+        },
+      );
+    }
+
+    const lastMessage = messages[messages.length - 1];
+    const lastText = lastMessage?.parts?.find((part) => part.type === 'text')?.text;
+
+    updateActiveObservation({ input: lastText });
+    updateActiveTrace({
+      name: 'chat-game-planning',
+      sessionId: chatId,
+      userId,
+      input: lastText,
+    });
+
+    const langfuse = tryGetLangfuseClient();
+    let langfusePrompt: unknown;
+    let systemPrompt: string;
+
+    if (langfuse) {
+      try {
+        const prompt = await langfuse.prompt.get(PROMPT_SLUG);
+        langfusePrompt = typeof prompt.toJSON === 'function' ? prompt.toJSON() : undefined;
+        systemPrompt = prompt.prompt;
+      } catch (error) {
+        console.warn(`[langfuse] Prompt ${PROMPT_SLUG} fallback to local`, error);
+        systemPrompt = await loadPromptWithHotReload(PROMPT_SLUG);
+      }
+    } else {
+      systemPrompt = await loadPromptWithHotReload(PROMPT_SLUG);
+    }
+
+    const telemetryMetadata: Record<string, unknown> = {
+      route: 'chat',
+      prompt: PROMPT_SLUG,
+    };
+
+    if (langfusePrompt) {
+      telemetryMetadata.langfusePrompt = langfusePrompt;
+    }
 
     const result = streamText({
-      model: "openai/gpt-5-2025-08-07",
+      model: 'openai/gpt-5-2025-08-07',
       system: systemPrompt,
       messages: convertToModelMessages(messages),
       tools: gameDescriptionsTools,
@@ -21,15 +77,45 @@ export async function POST(req: Request) {
       providerOptions: {
         openai: {
           reasoningSummary: 'auto',
-          textVerbosity: "medium",
-          reasoningEffort: "low",
+          textVerbosity: 'medium',
+          reasoningEffort: 'low',
         },
+      },
+      experimental_telemetry: {
+        isEnabled: true,
+        functionId: 'chat-game-planning',
+        metadata: telemetryMetadata,
+      },
+      onFinish: async ({ text, usage }) => {
+        updateActiveObservation({ output: text, usage });
+        updateActiveTrace({ output: text, usage });
+        trace.getActiveSpan()?.end();
+      },
+      onError: async (error) => {
+        const message = error instanceof Error ? error.message : String(error);
+        updateActiveObservation({ output: message, level: 'ERROR' });
+        updateActiveTrace({ output: message });
+        trace.getActiveSpan()?.end();
       },
     });
 
-    return result.toUIMessageStreamResponse({sendReasoning: true});
+    after(async () => {
+      try {
+        await langfuseSpanProcessor.forceFlush();
+      } catch (error) {
+        console.error('[langfuse] forceFlush failed', error);
+      }
+    });
+
+    return result.toUIMessageStreamResponse({ sendReasoning: true });
   } catch (error) {
-    console.log("Chat API Error:", error)
-    return new Response("Internal Server Error", { status: 500 });
+    console.error('Chat API Error:', error);
+    trace.getActiveSpan()?.end();
+    return new Response('Internal Server Error', { status: 500 });
   }
-}
+};
+
+export const POST = observe(handler, {
+  name: 'handle-chat-message',
+  endOnExit: false,
+});
