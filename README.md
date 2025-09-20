@@ -4,11 +4,7 @@ This is an AI-powered game generation application built with [Vercel AI SDK 5](h
 
 ## Getting Started
 
-First, add your Vercel AI Gateway API key to `.env.local` file:
-
-```
-AI_GATEWAY_API_KEY=sk-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-```
+First, add your Vercel AI Gateway API key to `.env` file. See the .env.example for keys.
 
 Then, run the development server:
 
