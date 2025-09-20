@@ -3,8 +3,7 @@ import { streamText, convertToModelMessages, type UIMessage } from 'ai';
 import { observe, updateActiveObservation, updateActiveTrace } from '@langfuse/tracing';
 import { trace } from '@opentelemetry/api';
 
-import { loadPromptWithHotReload } from '@/lib/prompts';
-import { tryGetLangfuseClient } from '@/lib/langfuse';
+import { loadPromptWithLangfuseFallback } from '@/lib/prompts';
 import { langfuseSpanProcessor } from '@/instrumentation';
 import 'dotenv/config';
 
@@ -42,22 +41,15 @@ const handler = async (req: Request) => {
       input: lastText ?? overrideSystem,
     });
 
-    const langfuse = tryGetLangfuseClient();
-    let langfusePrompt: unknown;
+    let langfusePromptMetadata: Record<string, unknown> | undefined;
     let systemPrompt = overrideSystem;
 
     if (!systemPrompt) {
-      if (langfuse) {
-        try {
-          const prompt = await langfuse.prompt.get(PROMPT_SLUG);
-          langfusePrompt = typeof prompt.toJSON === 'function' ? prompt.toJSON() : undefined;
-          systemPrompt = prompt.prompt;
-        } catch (error) {
-          console.warn(`[langfuse] Prompt ${PROMPT_SLUG} fallback to local`, error);
-          systemPrompt = await loadPromptWithHotReload(PROMPT_SLUG);
-        }
-      } else {
-        systemPrompt = await loadPromptWithHotReload(PROMPT_SLUG);
+      const promptResult = await loadPromptWithLangfuseFallback(PROMPT_SLUG);
+      systemPrompt = promptResult.prompt;
+
+      if (promptResult.source === 'langfuse' && promptResult.metadata) {
+        langfusePromptMetadata = promptResult.metadata;
       }
     }
 
@@ -70,8 +62,8 @@ const handler = async (req: Request) => {
       prompt: overrideSystem ? 'custom' : PROMPT_SLUG,
     };
 
-    if (langfusePrompt) {
-      telemetryMetadata.langfusePrompt = langfusePrompt;
+    if (langfusePromptMetadata) {
+      telemetryMetadata.langfusePrompt = langfusePromptMetadata;
     }
 
     const result = streamText({

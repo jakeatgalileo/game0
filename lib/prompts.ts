@@ -1,7 +1,21 @@
 import { readFile } from 'fs/promises';
 import { join } from 'path';
 
+import { tryGetLangfuseClient } from '@/lib/langfuse';
+
 export type PromptType = 'game-planning' | 'code-generation';
+
+export type PromptSource = 'langfuse' | 'local';
+
+export type PromptLoadResult = {
+  prompt: string;
+  source: PromptSource;
+  metadata?: Record<string, unknown>;
+};
+
+type LangfusePromptOptions = {
+  variant?: string;
+};
 
 // Cache to store loaded prompts in memory
 const promptCache = new Map<PromptType, string>();
@@ -29,6 +43,37 @@ export async function loadPrompt(promptType: PromptType): Promise<string> {
     console.error(`Failed to load prompt: ${promptType}`, error);
     throw new Error(`Failed to load system prompt: ${promptType}`);
   }
+}
+
+export async function loadPromptWithLangfuseFallback(
+  promptType: PromptType,
+  options: LangfusePromptOptions = {},
+): Promise<PromptLoadResult> {
+  const langfuse = tryGetLangfuseClient();
+
+  if (langfuse) {
+    try {
+      const prompt = await langfuse.prompt.get(
+        promptType,
+        options.variant ? { variant: options.variant } : undefined,
+      );
+
+      return {
+        prompt: prompt.prompt,
+        source: 'langfuse',
+        metadata: typeof prompt.toJSON === 'function' ? prompt.toJSON() : undefined,
+      };
+    } catch (error) {
+      const variantLabel = options.variant ? ` (variant: ${options.variant})` : '';
+      console.warn(`[langfuse] Prompt ${promptType}${variantLabel} fallback to local`, error);
+    }
+  }
+
+  const prompt = await loadPromptWithHotReload(promptType);
+  return {
+    prompt,
+    source: 'local',
+  };
 }
 
 /**

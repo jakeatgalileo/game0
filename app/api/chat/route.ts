@@ -3,8 +3,7 @@ import { streamText, convertToModelMessages, type UIMessage, stepCountIs } from 
 import { observe, updateActiveObservation, updateActiveTrace } from '@langfuse/tracing';
 import { trace } from '@opentelemetry/api';
 
-import { loadPromptWithHotReload } from '@/lib/prompts';
-import { tryGetLangfuseClient } from '@/lib/langfuse';
+import { loadPromptWithLangfuseFallback } from '@/lib/prompts';
 import { langfuseSpanProcessor } from '@/instrumentation';
 import { gameDescriptionsTools } from '@/app/tools/game-descriptions';
 import 'dotenv/config';
@@ -42,29 +41,15 @@ const handler = async (req: Request) => {
       input: lastText,
     });
 
-    const langfuse = tryGetLangfuseClient();
-    let langfusePrompt: unknown;
-    let systemPrompt: string;
-
-    if (langfuse) {
-      try {
-        const prompt = await langfuse.prompt.get(PROMPT_SLUG);
-        langfusePrompt = typeof prompt.toJSON === 'function' ? prompt.toJSON() : undefined;
-        systemPrompt = prompt.prompt;
-      } catch (error) {
-        console.warn(`[langfuse] Prompt ${PROMPT_SLUG} fallback to local`, error);
-        systemPrompt = await loadPromptWithHotReload(PROMPT_SLUG);
-      }
-    } else {
-      systemPrompt = await loadPromptWithHotReload(PROMPT_SLUG);
-    }
+    const { prompt: systemPrompt, metadata: langfusePrompt, source: promptSource } =
+      await loadPromptWithLangfuseFallback(PROMPT_SLUG);
 
     const telemetryMetadata: Record<string, unknown> = {
       route: 'chat',
       prompt: PROMPT_SLUG,
     };
 
-    if (langfusePrompt) {
+    if (promptSource === 'langfuse' && langfusePrompt) {
       telemetryMetadata.langfusePrompt = langfusePrompt;
     }
 
