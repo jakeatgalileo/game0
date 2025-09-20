@@ -42,7 +42,9 @@ const handler = async (req: Request) => {
     });
 
     const { prompt: systemPrompt, metadata: langfusePrompt, source: promptSource } =
-      await loadPromptWithLangfuseFallback(PROMPT_SLUG);
+      await loadPromptWithLangfuseFallback(PROMPT_SLUG, {
+        slug: `game0/${PROMPT_SLUG}`,
+      });
 
     const telemetryMetadata: Record<string, unknown> = {
       route: 'chat',
@@ -54,7 +56,7 @@ const handler = async (req: Request) => {
     }
 
     const result = streamText({
-      model: 'openai/gpt-5-2025-08-07',
+      model: 'openai/gpt-5-mini-2025-08-07',
       system: systemPrompt,
       messages: convertToModelMessages(messages),
       tools: gameDescriptionsTools,
@@ -68,12 +70,11 @@ const handler = async (req: Request) => {
       },
       experimental_telemetry: {
         isEnabled: true,
-        functionId: 'chat-game-planning',
-        metadata: telemetryMetadata,
+        functionId: 'chat-game-planning'
       },
       onFinish: async ({ text, usage }) => {
-        updateActiveObservation({ output: text, usage });
-        updateActiveTrace({ output: text, usage });
+        updateActiveObservation({ output: text });
+        updateActiveTrace({ output: text });
         trace.getActiveSpan()?.end();
       },
       onError: async (error) => {

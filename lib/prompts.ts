@@ -15,6 +15,7 @@ export type PromptLoadResult = {
 
 type LangfusePromptOptions = {
   variant?: string;
+  slug?: string;
 };
 
 // Cache to store loaded prompts in memory
@@ -52,20 +53,52 @@ export async function loadPromptWithLangfuseFallback(
   const langfuse = tryGetLangfuseClient();
 
   if (langfuse) {
-    try {
-      const prompt = await langfuse.prompt.get(
-        promptType,
-        options.variant ? { variant: options.variant } : undefined,
-      );
+    const candidateSlugs: string[] = [];
+    const addCandidate = (slug?: string) => {
+      if (!slug || candidateSlugs.includes(slug)) {
+        return;
+      }
+      candidateSlugs.push(slug);
+    };
 
-      return {
-        prompt: prompt.prompt,
-        source: 'langfuse',
-        metadata: typeof prompt.toJSON === 'function' ? prompt.toJSON() : undefined,
-      };
-    } catch (error) {
+    addCandidate(options.slug);
+
+    const envPrefix = process.env.LANGFUSE_PROMPT_PREFIX;
+    if (envPrefix) {
+      addCandidate(`${envPrefix}${promptType}`);
+    }
+
+    addCandidate(`game0/${promptType}`);
+    addCandidate(promptType);
+
+    let lastError: unknown;
+    let lastSlug: string | undefined;
+
+    for (const slug of candidateSlugs) {
+      try {
+        const prompt = await langfuse.prompt.get(
+          slug,
+          options.variant ? { variant: options.variant } : undefined,
+        );
+
+        return {
+          prompt: prompt.prompt,
+          source: 'langfuse',
+          metadata: typeof prompt.toJSON === 'function' ? prompt.toJSON() : undefined,
+        };
+      } catch (error) {
+        lastError = error;
+        lastSlug = slug;
+      }
+    }
+
+    if (lastError) {
       const variantLabel = options.variant ? ` (variant: ${options.variant})` : '';
-      console.warn(`[langfuse] Prompt ${promptType}${variantLabel} fallback to local`, error);
+      const slugLabel = lastSlug ? ` (slug: ${lastSlug})` : '';
+      console.warn(
+        `[langfuse] Prompt ${promptType}${variantLabel}${slugLabel} fallback to local`,
+        lastError,
+      );
     }
   }
 

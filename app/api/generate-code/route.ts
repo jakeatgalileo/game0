@@ -45,7 +45,9 @@ const handler = async (req: Request) => {
     let systemPrompt = overrideSystem;
 
     if (!systemPrompt) {
-      const promptResult = await loadPromptWithLangfuseFallback(PROMPT_SLUG);
+      const promptResult = await loadPromptWithLangfuseFallback(PROMPT_SLUG, {
+        slug: `game0/${PROMPT_SLUG}`,
+      });
       systemPrompt = promptResult.prompt;
 
       if (promptResult.source === 'langfuse' && promptResult.metadata) {
@@ -67,7 +69,7 @@ const handler = async (req: Request) => {
     }
 
     const result = streamText({
-      model: 'openai/gpt-5-2025-08-07',
+      model: 'openai/gpt-5-mini-2025-08-07',
       system: systemPrompt,
       messages: convertToModelMessages(messages),
       providerOptions: {

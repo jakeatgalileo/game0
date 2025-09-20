@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server';
 
-import { loadPromptWithHotReload, type PromptType } from '@/lib/prompts';
-import { tryGetLangfuseClient } from '@/lib/langfuse';
+import { loadPromptWithLangfuseFallback, type PromptType } from '@/lib/prompts';
 
 export const runtime = 'nodejs';
 
@@ -26,26 +25,17 @@ export async function GET(req: Request) {
     );
   }
 
-  const langfuse = tryGetLangfuseClient();
+  const envPrefix = process.env.LANGFUSE_PROMPT_PREFIX;
 
-  if (langfuse) {
-    try {
-      const prompt = await langfuse.prompt.get(promptName, variant ? { variant } : undefined);
-      const metadata = typeof prompt.toJSON === 'function' ? prompt.toJSON() : undefined;
+  let normalizedPromptName = promptName;
 
-      const response: PromptResponse = {
-        source: 'langfuse',
-        prompt: prompt.prompt,
-        metadata,
-      };
-
-      return NextResponse.json(response, { status: 200 });
-    } catch (error) {
-      console.warn('[langfuse] Falling back to local prompt:', error);
-    }
+  if (envPrefix && promptName.startsWith(envPrefix)) {
+    normalizedPromptName = promptName.slice(envPrefix.length);
+  } else if (promptName.startsWith('game0/')) {
+    normalizedPromptName = promptName.slice('game0/'.length);
   }
 
-  if (!isPromptType(promptName)) {
+  if (!isPromptType(normalizedPromptName)) {
     return NextResponse.json(
       { error: `Prompt ${promptName} not found` },
       { status: 404 },
@@ -53,14 +43,23 @@ export async function GET(req: Request) {
   }
 
   try {
-    const prompt = await loadPromptWithHotReload(promptName);
+    const result = await loadPromptWithLangfuseFallback(normalizedPromptName, {
+      slug: promptName,
+      variant,
+    });
+
     const response: PromptResponse = {
-      source: 'local',
-      prompt,
+      source: result.source,
+      prompt: result.prompt,
     };
+
+    if (result.metadata) {
+      response.metadata = result.metadata;
+    }
+
     return NextResponse.json(response, { status: 200 });
   } catch (error) {
-    console.error('[langfuse] Unable to load prompt locally:', error);
+    console.error('[langfuse] Unable to load prompt:', error);
     return NextResponse.json(
       { error: `Prompt ${promptName} not available` },
       { status: 404 },
